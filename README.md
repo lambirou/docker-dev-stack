@@ -21,11 +21,45 @@ graphe, cache, stockage objet et outillage, le tout derriere un reverse proxy Tr
 
 Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage oblige.
 
-## Prerequis
+## Installation
 
-Docker Desktop. Valide avec Docker 29.7.2 et Compose v5.5.1.
+Tout est scriptable. Depuis la racine du depot, dans un PowerShell **administrateur** :
 
-## Demarrage
+```powershell
+.\scripts\install.ps1 -WithHosts -WithTls
+```
+
+Le script installe Docker Desktop s'il manque, cree le `.env`, telecharge les images,
+demarre les services, ajoute les domaines `.test` au fichier hosts, genere les
+certificats HTTPS, puis verifie les 28 points de controle.
+
+Sans droits administrateur, la version reduite fonctionne aussi :
+
+```powershell
+.\scripts\install.ps1
+```
+
+Les deux options qui touchent la machine sont alors ignorees et signalees en fin
+d'execution. Le script est idempotent : le relancer ne casse rien et ne duplique rien.
+
+### Les scripts
+
+| Script | Role | Admin |
+| --- | --- | --- |
+| `install.ps1` | Orchestrateur complet | selon les options |
+| `install-docker.ps1` | Installe Docker Desktop et attend le moteur | oui si absent |
+| `setup-hosts.ps1` | Ecrit les entrees `.test` dans le fichier hosts | oui |
+| `setup-tls.ps1` | Installe mkcert et genere les certificats | oui |
+| `verify.ps1` | Controle sante et routage de toute la stack | non |
+| `lib.ps1` | Fonctions partagees, non executable seul | - |
+
+Options de `install.ps1` : `-SkipDocker` saute la verification Docker, `-WithHosts`
+ajoute les domaines `.test`, `-WithTls` genere les certificats, `-NoVerify` saute
+le controle final.
+
+Pour retirer les entrees du fichier hosts : `.\scripts\setup-hosts.ps1 -Remove`.
+
+### Installation manuelle
 
 ```powershell
 Copy-Item .env.example .env   # puis ajuster les mots de passe
@@ -33,6 +67,9 @@ docker compose up -d
 docker compose ps
 ```
 
+## Prerequis
+
+Docker Desktop. Valide avec Docker 29.7.2 et Compose v5.5.1.
 Le premier demarrage telecharge environ 2 Go d'images. Neo4j met 20 a 30 secondes
 a devenir sain, les autres services sont prets en quelques secondes.
 
@@ -42,6 +79,12 @@ Windows ne resout ni `.test` ni `.localhost` au niveau DNS. Les navigateurs mapp
 `*.localhost` sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`.
 Pour activer les URL `.test` partout, y compris depuis `curl` et le code applicatif,
 dans un **PowerShell administrateur** :
+
+```powershell
+.\scripts\setup-hosts.ps1
+```
+
+Equivalent manuel :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
@@ -65,6 +108,12 @@ mais le navigateur affiche un avertissement a chaque domaine.
 
 Pour des certificats reconnus par le navigateur, utiliser mkcert, qui installe une
 autorite de certification locale dans le magasin Windows :
+
+```powershell
+.\scripts\setup-tls.ps1
+```
+
+Le script demande confirmation avant de toucher au magasin de certificats. Equivalent manuel :
 
 ```powershell
 winget install FiloSottile.mkcert
