@@ -1,0 +1,7 @@
+.env
+config/traefik/certs/*
+!config/traefik/certs/.gitkeep
+config/traefik/dynamic/tls.yml
+data/**
+!data/*/
+!data/**/.gitkeep

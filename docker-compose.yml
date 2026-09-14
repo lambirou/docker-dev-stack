@@ -1,0 +1,276 @@
+name: dev-stack
+
+x-common: &common
+  restart: unless-stopped
+  networks: [devnet]
+
+services:
+  postgres:
+    <<: *common
+    image: pgvector/pgvector:pg17
+    container_name: dev-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./data/postgres:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mariadb:
+    <<: *common
+    image: mariadb:12.3
+    container_name: dev-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    ports: ["${MARIADB_PORT:-3306}:3306"]
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./config/mariadb:/etc/mysql/conf.d:ro
+      - ./data/mariadb:/backups
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    <<: *common
+    image: phpmyadmin:5
+    container_name: dev-phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 512M
+    ports: ["${PHPMYADMIN_PORT:-8306}:80"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.phpmyadmin.rule: Host(`phpmyadmin.test`) || Host(`phpmyadmin.localhost`)
+      traefik.http.routers.phpmyadmin.entrypoints: web
+      traefik.http.routers.phpmyadmin-tls.rule: Host(`phpmyadmin.test`) || Host(`phpmyadmin.localhost`)
+      traefik.http.routers.phpmyadmin-tls.entrypoints: websecure
+      traefik.http.routers.phpmyadmin-tls.tls: "true"
+      traefik.http.services.phpmyadmin.loadbalancer.server.port: "80"
+
+  qdrant:
+    <<: *common
+    image: qdrant/qdrant:v1.19.0
+    container_name: dev-qdrant
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+      - ./data/qdrant:/qdrant/snapshots
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.qdrant.rule: Host(`qdrant.test`) || Host(`qdrant.localhost`)
+      traefik.http.routers.qdrant.entrypoints: web
+      traefik.http.routers.qdrant-tls.rule: Host(`qdrant.test`) || Host(`qdrant.localhost`)
+      traefik.http.routers.qdrant-tls.entrypoints: websecure
+      traefik.http.routers.qdrant-tls.tls: "true"
+      traefik.http.services.qdrant.loadbalancer.server.port: "6333"
+
+  meilisearch:
+    <<: *common
+    image: getmeili/meilisearch:v1
+    container_name: dev-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ENV: development
+      MEILI_DUMP_DIR: /dumps
+    ports: ["${MEILI_PORT:-7700}:7700"]
+    volumes:
+      - meili-data:/meili_data
+      - ./data/meilisearch:/dumps
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.meilisearch.rule: Host(`meilisearch.test`) || Host(`meilisearch.localhost`)
+      traefik.http.routers.meilisearch.entrypoints: web
+      traefik.http.routers.meilisearch-tls.rule: Host(`meilisearch.test`) || Host(`meilisearch.localhost`)
+      traefik.http.routers.meilisearch-tls.entrypoints: websecure
+      traefik.http.routers.meilisearch-tls.tls: "true"
+      traefik.http.services.meilisearch.loadbalancer.server.port: "7700"
+
+  neo4j:
+    <<: *common
+    image: neo4j:5.26-community
+    container_name: dev-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_max__size: 1G
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - ./data/neo4j:/import
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.neo4j.rule: Host(`neo4j.test`) || Host(`neo4j.localhost`)
+      traefik.http.routers.neo4j.entrypoints: web
+      traefik.http.routers.neo4j-tls.rule: Host(`neo4j.test`) || Host(`neo4j.localhost`)
+      traefik.http.routers.neo4j-tls.entrypoints: websecure
+      traefik.http.routers.neo4j-tls.tls: "true"
+      traefik.http.services.neo4j.loadbalancer.server.port: "7474"
+
+  redis:
+    <<: *common
+    image: redis:8-alpine
+    container_name: dev-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  traefik:
+    <<: *common
+    image: traefik:v3.7
+    container_name: dev-traefik
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --log.level=INFO
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8090}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./config/traefik/certs:/etc/traefik/certs:ro
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik.rule: Host(`traefik.test`) || Host(`traefik.localhost`)
+      traefik.http.routers.traefik.entrypoints: web
+      traefik.http.routers.traefik.service: api@internal
+      traefik.http.routers.traefik-tls.rule: Host(`traefik.test`) || Host(`traefik.localhost`)
+      traefik.http.routers.traefik-tls.entrypoints: websecure
+      traefik.http.routers.traefik-tls.tls: "true"
+      traefik.http.routers.traefik-tls.service: api@internal
+
+  minio:
+    <<: *common
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: dev-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.minio.rule: Host(`minio.test`) || Host(`minio.localhost`)
+      traefik.http.routers.minio.entrypoints: web
+      traefik.http.routers.minio-tls.rule: Host(`minio.test`) || Host(`minio.localhost`)
+      traefik.http.routers.minio-tls.entrypoints: websecure
+      traefik.http.routers.minio-tls.tls: "true"
+      traefik.http.services.minio.loadbalancer.server.port: "9001"
+
+  mailpit:
+    <<: *common
+    image: axllent/mailpit:v1.31.1
+    container_name: dev-mailpit
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    volumes:
+      - mailpit-data:/data
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.mailpit.rule: Host(`mail.test`) || Host(`mail.localhost`)
+      traefik.http.routers.mailpit.entrypoints: web
+      traefik.http.routers.mailpit-tls.rule: Host(`mail.test`) || Host(`mail.localhost`)
+      traefik.http.routers.mailpit-tls.entrypoints: websecure
+      traefik.http.routers.mailpit-tls.tls: "true"
+      traefik.http.services.mailpit.loadbalancer.server.port: "8025"
+
+  redisinsight:
+    <<: *common
+    image: redis/redisinsight:latest
+    container_name: dev-redisinsight
+    ports: ["${REDISINSIGHT_PORT:-5540}:5540"]
+    volumes:
+      - redisinsight-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.redisinsight.rule: Host(`redis.test`) || Host(`redis.localhost`)
+      traefik.http.routers.redisinsight.entrypoints: web
+      traefik.http.routers.redisinsight-tls.rule: Host(`redis.test`) || Host(`redis.localhost`)
+      traefik.http.routers.redisinsight-tls.entrypoints: websecure
+      traefik.http.routers.redisinsight-tls.tls: "true"
+      traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
+
+networks:
+  devnet:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mariadb-data:
+  qdrant-data:
+  meili-data:
+  neo4j-data:
+  neo4j-logs:
+  redis-data:
+  minio-data:
+  mailpit-data:
+  redisinsight-data:

@@ -1,0 +1,11 @@
+# Renomme ce fichier en tls.yml APRES avoir genere les certificats avec mkcert.
+# Traefik ne lit que les .yml / .yaml / .toml du dossier, ce .example est ignore.
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/local.pem
+        keyFile: /etc/traefik/certs/local-key.pem
+  certificates:
+    - certFile: /etc/traefik/certs/local.pem
+      keyFile: /etc/traefik/certs/local-key.pem
