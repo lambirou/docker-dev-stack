@@ -19,6 +19,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | minio | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` | Stockage objet S3 | https://minio.test | API 9000, console 9001 |
 | mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.test | UI 8025, SMTP 1025 |
 | it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.test | 8081 |
+| dockhand | `fnsys/dockhand:v1.0.48` | Gestion des conteneurs Docker | https://containers.test | 8082 |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
 
 Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
@@ -33,7 +34,7 @@ Tout est scriptable. Depuis la racine du dépôt, dans un PowerShell **administr
 
 Le script installe Docker Desktop s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 31 points de contrôle.
+certificats HTTPS, puis vérifie les 37 points de contrôle.
 
 Sans droits administrateur, la version réduite fonctionne aussi :
 
@@ -90,7 +91,7 @@ dans un **PowerShell administrateur** :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools"
+$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers"
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
@@ -233,6 +234,17 @@ si ce point devient gênant.
 taguée publiée depuis. Le développement continue sur le tag `nightly`, reconstruit
 régulièrement mais non versionné : à utiliser seulement si un outil récent manque,
 en acceptant qu'une mise à jour puisse changer le comportement sans préavis.
+
+**Dockhand a le socket Docker en écriture.** C'est ce qui lui permet de démarrer,
+arrêter et supprimer des conteneurs, mais un accès en écriture à `/var/run/docker.sock`
+équivaut à un accès root sur la machine hôte. Acceptable pour une stack locale non
+exposée ; ne jamais publier `containers.test` au-delà de 127.0.0.1. Pour un usage plus
+strict, passer par un socket-proxy en lecture seule, au prix des actions d'écriture.
+
+Dockhand est distribué sous licence **BUSL 1.1**, pas sous une licence open source
+classique : usage interne et personnel libre, revente ou hébergement pour des tiers
+exclus. Le compte administrateur se crée au premier accès à l'interface, il n'y a rien
+à mettre dans `.env`.
 
 ## Dépannage
 

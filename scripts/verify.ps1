@@ -64,7 +64,8 @@ try {
         @{ Name = 'mailpit'; Url = 'http://localhost:' + $cfg['MAILPIT_UI_PORT'] + '/api/v1/info' },
         @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' },
         @{ Name = 'portal'; Url = 'http://localhost:' + $cfg['PORTAL_PORT'] + '/' },
-        @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' }
+        @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' },
+        @{ Name = 'dockhand'; Url = 'http://localhost:' + $cfg['DOCKHAND_PORT'] + '/' }
     )
     foreach ($ep in $endpoints) {
         $code = Get-HttpCode -Url $ep.Url
