@@ -3,6 +3,8 @@
 Environnement de développement local : bases relationnelles, moteurs vectoriels, recherche,
 graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy Traefik.
 
+![Le portail de la stack : une carte par service, avec son état, ses domaines et son port direct](docs/screenshot.png)
+
 ## Services
 
 | Service | Image | Rôle | URL | Port direct |
