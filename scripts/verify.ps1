@@ -65,7 +65,8 @@ try {
         @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' },
         @{ Name = 'portal'; Url = 'http://localhost:' + $cfg['PORTAL_PORT'] + '/' },
         @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' },
-        @{ Name = 'dockhand'; Url = 'http://localhost:' + $cfg['DOCKHAND_PORT'] + '/' }
+        @{ Name = 'dockhand'; Url = 'http://localhost:' + $cfg['DOCKHAND_PORT'] + '/' },
+        @{ Name = 'traefik-manager'; Url = 'http://localhost:' + $cfg['TRAEFIK_MANAGER_PORT'] + '/login' }
     )
     foreach ($ep in $endpoints) {
         $code = Get-HttpCode -Url $ep.Url

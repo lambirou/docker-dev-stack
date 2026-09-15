@@ -10,7 +10,7 @@
 set -eu
 
 CIBLE=${PORTAL_CONFIG_PATH:-/usr/share/nginx/html/config.json}
-FILTRE='^(POSTGRES|MARIADB|QDRANT|MEILI|NEO4J|REDIS|MINIO)_[A-Z0-9_]*='
+FILTRE='^(POSTGRES|MARIADB|QDRANT|MEILI|NEO4J|REDIS|MINIO|TRAEFIK_MANAGER)_[A-Z0-9_]*='
 
 echappe() {
   printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'

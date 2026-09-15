@@ -70,6 +70,8 @@ verifier_endpoint redisinsight "http://localhost:$(cfg REDISINSIGHT_PORT 5540)/a
 verifier_endpoint portal       "http://localhost:$(cfg PORTAL_PORT 8080)/"
 verifier_endpoint it-tools     "http://localhost:$(cfg IT_TOOLS_PORT 8081)/"
 verifier_endpoint dockhand     "http://localhost:$(cfg DOCKHAND_PORT 8082)/"
+# La racine redirige vers la page de connexion : on sonde /login, qui repond 200.
+verifier_endpoint traefik-manager "http://localhost:$(cfg TRAEFIK_MANAGER_PORT 8083)/login"
 
 etape 'Routage Traefik'
 

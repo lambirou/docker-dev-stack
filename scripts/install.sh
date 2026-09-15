@@ -76,7 +76,7 @@ if [ "$SOCKET" != '/var/run/docker.sock' ]; then
   note "socket Docker non standard détecté : $SOCKET"
 fi
 
-for dossier in postgres mariadb qdrant meilisearch neo4j redis; do
+for dossier in postgres mariadb qdrant meilisearch neo4j redis traefik-manager; do
   mkdir -p "$RACINE_DEPOT/data/$dossier"
 done
 case "$(systeme)" in

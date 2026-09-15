@@ -282,6 +282,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      TRAEFIK_MANAGER_ADMIN_PASSWORD: ${TRAEFIK_MANAGER_ADMIN_PASSWORD}
     labels:
       traefik.enable: "true"
       traefik.http.routers.portal.rule: Host(`portal.test`) || Host(`portal.localhost`)
@@ -329,6 +330,46 @@ services:
       traefik.http.routers.dockhand-tls.tls: "true"
       traefik.http.services.dockhand.loadbalancer.server.port: "3000"
 
+  traefik-manager:
+    <<: *common
+    image: ghcr.io/chr0nzz/traefik-manager:1.13.5
+    container_name: dev-traefik-manager
+    environment:
+      TZ: ${TZ:-Africa/Abidjan}
+      # Sans cette variable, chaque worker gunicorn tire son propre mot de passe
+      # aleatoire et l'ecrit dans les logs : deux valeurs differentes au premier
+      # demarrage. On fixe donc le mot de passe initial depuis .env.
+      ADMIN_PASSWORD: ${TRAEFIK_MANAGER_ADMIN_PASSWORD}
+      # L'API interne de Traefik sur le reseau devnet, pas le dashboard publie
+      # sur l'hote : --api.insecure=true l'expose deja sur le port 8080.
+      TRAEFIK_API_URL: http://traefik:8080
+      # Les routeurs ecrits depuis l'interface atterrissent dans
+      # config/traefik/dynamic, que Traefik surveille deja en continu.
+      CONFIG_DIR: /app/dynamic
+      SETTINGS_PATH: /app/config/manager.yml
+      BACKUP_DIR: /app/backups
+      # Domaines proposes dans le formulaire d'ajout de route.
+      DOMAINS: test,localhost
+      # Les certificats viennent de mkcert, pas d'un resolveur ACME.
+      CERT_RESOLVER: none
+      # La stack repond aussi en HTTP simple sur localhost.
+      COOKIE_SECURE: "false"
+      PROXY_FIX_HOPS: "1"
+    ports: ["${TRAEFIK_MANAGER_PORT:-8083}:5000"]
+    volumes:
+      - ./config/traefik/dynamic:/app/dynamic
+      - traefik-manager-data:/app/config
+      - ./data/traefik-manager:/app/backups
+    depends_on: [traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik-manager.rule: Host(`proxy.test`) || Host(`proxy.localhost`)
+      traefik.http.routers.traefik-manager.entrypoints: web
+      traefik.http.routers.traefik-manager-tls.rule: Host(`proxy.test`) || Host(`proxy.localhost`)
+      traefik.http.routers.traefik-manager-tls.entrypoints: websecure
+      traefik.http.routers.traefik-manager-tls.tls: "true"
+      traefik.http.services.traefik-manager.loadbalancer.server.port: "5000"
+
 networks:
   devnet:
     driver: bridge
@@ -345,3 +386,4 @@ volumes:
   mailpit-data:
   redisinsight-data:
   dockhand-data:
+  traefik-manager-data:

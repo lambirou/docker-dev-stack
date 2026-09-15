@@ -57,7 +57,7 @@ if (Test-Path -LiteralPath $envFile) {
     Write-Note 'pense a remplacer les mots de passe par defaut'
 }
 
-foreach ($dir in @('data\postgres', 'data\mariadb', 'data\qdrant', 'data\meilisearch', 'data\neo4j', 'data\redis')) {
+foreach ($dir in @('data\postgres', 'data\mariadb', 'data\qdrant', 'data\meilisearch', 'data\neo4j', 'data\redis', 'data\traefik-manager')) {
     $full = Join-Path $root $dir
     if (-not (Test-Path -LiteralPath $full)) {
         New-Item -ItemType Directory -Force -Path $full | Out-Null

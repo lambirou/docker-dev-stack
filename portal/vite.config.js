@@ -7,7 +7,7 @@ const FICHIER_ENV = new URL("../.env", import.meta.url);
 
 // Même filtre que portal/docker-entrypoint.d/40-portal-config.sh : seules les
 // variables des services de la stack sont exposées au portail.
-const FILTRE = /^(POSTGRES|MARIADB|QDRANT|MEILI|NEO4J|REDIS|MINIO)_[A-Z0-9_]*$/;
+const FILTRE = /^(POSTGRES|MARIADB|QDRANT|MEILI|NEO4J|REDIS|MINIO|TRAEFIK_MANAGER)_[A-Z0-9_]*$/;
 
 function lireEnv() {
   let brut;

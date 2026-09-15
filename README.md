@@ -20,6 +20,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.test | UI 8025, SMTP 1025 |
 | it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.test | 8081 |
 | dockhand | `fnsys/dockhand:v1.0.48` | Gestion des conteneurs Docker | https://containers.test | 8082 |
+| traefik-manager | `ghcr.io/chr0nzz/traefik-manager:1.13.5` | UI de configuration de Traefik (routes, middlewares) | https://proxy.test | 8083 |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
 
 Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
@@ -44,7 +45,7 @@ chmod +x scripts/*.sh          # une seule fois, si le bit exécutable manque
 
 Le script installe Docker s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 37 points de contrôle.
+certificats HTTPS, puis vérifie les 40 points de contrôle.
 
 Sans droits élevés, la version réduite fonctionne aussi — `.\scripts\install.ps1`
 ou `./scripts/install.sh`. Les deux options qui touchent la machine sont alors
@@ -129,14 +130,14 @@ sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les U
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers"
+$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy"
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
 Et sous macOS ou Linux :
 
 ```bash
-for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers; do
+for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy; do
   echo "127.0.0.1 $n.test" | sudo tee -a /etc/hosts >/dev/null
 done
 ```
@@ -230,6 +231,7 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 | MinIO | `devadmin` | `devadminpass` |
 | Qdrant | clé API | `devkey` (en-tête `api-key`) |
 | Meilisearch | clé maître | `devmasterkey_min16chars` |
+| Traefik Manager | - | `devproxypass` (mot de passe seul, pas de nom d'utilisateur) |
 
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.
@@ -278,6 +280,7 @@ Le dossier `./data` sert de zone d'échange avec l'hôte :
 | `data/qdrant` | qdrant:/qdrant/snapshots | snapshots |
 | `data/meilisearch` | meilisearch:/dumps | dumps |
 | `data/neo4j` | neo4j:/import | fichiers à importer |
+| `data/traefik-manager` | traefik-manager:/app/backups | sauvegardes de la config dynamique |
 
 Le dossier `./config` contient la configuration montée en lecture seule : script
 d'initialisation Postgres, fichier de réglages MariaDB, configuration dynamique Traefik.
@@ -355,6 +358,24 @@ Dockhand est distribué sous licence **BUSL 1.1**, pas sous une licence open sou
 classique : usage interne et personnel libre, revente ou hébergement pour des tiers
 exclus. Le compte administrateur se crée au premier accès à l'interface, il n'y a rien
 à mettre dans `.env`.
+
+**Traefik Manager écrit dans `config/traefik/dynamic`.** C'est tout l'intérêt : les
+routeurs, services et middlewares créés depuis l'interface atterrissent dans le dossier
+que Traefik surveille déjà (`--providers.file.watch=true`), et sont actifs sans
+redémarrage. Ce dossier est donc le seul de `./config` monté en écriture, et
+`tls.yml` y apparaît comme un fichier éditable parmi les autres.
+
+Deux fonctions restent éteintes, faute de fichier à leur donner : l'éditeur de
+configuration statique et l'onglet Plugins, parce que ce Traefik est configuré par
+arguments de ligne de commande et non par un `traefik.yml` ; et l'onglet Certificats,
+qui lit un `acme.json` inexistant ici — les certificats viennent de mkcert, d'où
+`CERT_RESOLVER=none`.
+
+Le mot de passe de première connexion vient de `TRAEFIK_MANAGER_ADMIN_PASSWORD`. Sans
+cette variable, chaque worker gunicorn en tire un au hasard et l'écrit dans ses logs :
+deux mots de passe différents pour un seul compte. L'interface demande ensuite d'en
+choisir un définitif, stocké dans le volume `traefik-manager-data` ; à partir de là,
+la variable n'est plus lue. Il n'y a pas de nom d'utilisateur, seulement un mot de passe.
 
 ## Dépannage
 

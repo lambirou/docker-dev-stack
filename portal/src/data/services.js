@@ -220,6 +220,21 @@ export const services = [
     identifiants: [],
   },
   {
+    id: "traefik-manager",
+    nom: "Traefik Manager",
+    role: "Routeurs, services et middlewares Traefik. Connexion par mot de passe seul",
+    motsCles: ["traefik", "proxy", "reverse proxy", "routes", "routeurs", "routers", "middlewares", "load balancer", "répartition de charge", "certificats", "tls", "https", "dynamic", "yaml", "entrypoints", "redirection"],
+    categorie: "outillage",
+    image: "ghcr.io/chr0nzz/traefik-manager:1.13.5",
+    urlTest: "https://proxy.test",
+    urlLocalhost: "https://proxy.localhost",
+    portDirect: 8083,
+    sonde: "http://localhost:8083",
+    identifiants: [
+      { label: "Mot de passe", valeur: "${TRAEFIK_MANAGER_ADMIN_PASSWORD}" },
+    ],
+  },
+  {
     id: "portal",
     nom: "Portail",
     role: "Cette page. Servie par nginx depuis un build Vite",

@@ -128,7 +128,7 @@ attendre() {
 }
 
 noms_stack() {
-  printf '%s\n' portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers
+  printf '%s\n' portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy
 }
 
 vider_cache_dns() {
