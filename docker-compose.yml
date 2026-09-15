@@ -259,6 +259,25 @@ services:
       traefik.http.routers.redisinsight-tls.tls: "true"
       traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
 
+  it-tools:
+    <<: *common
+    image: corentinth/it-tools:2024.10.22-7ca5933
+    container_name: dev-it-tools
+    ports: ["${IT_TOOLS_PORT:-8081}:80"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.it-tools.rule: Host(`tools.test`) || Host(`tools.localhost`)
+      traefik.http.routers.it-tools.entrypoints: web
+      traefik.http.routers.it-tools-tls.rule: Host(`tools.test`) || Host(`tools.localhost`)
+      traefik.http.routers.it-tools-tls.entrypoints: websecure
+      traefik.http.routers.it-tools-tls.tls: "true"
+      traefik.http.services.it-tools.loadbalancer.server.port: "80"
+
 networks:
   devnet:
     driver: bridge

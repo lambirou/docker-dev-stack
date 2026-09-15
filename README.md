@@ -17,6 +17,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | redisinsight | `redis/redisinsight:latest` | UI Redis | https://redis.test | 5540 |
 | minio | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` | Stockage objet S3 | https://minio.test | API 9000, console 9001 |
 | mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.test | UI 8025, SMTP 1025 |
+| it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.test | 8081 |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
 
 Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
@@ -31,7 +32,7 @@ Tout est scriptable. Depuis la racine du dépôt, dans un PowerShell **administr
 
 Le script installe Docker Desktop s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 28 points de contrôle.
+certificats HTTPS, puis vérifie les 31 points de contrôle.
 
 Sans droits administrateur, la version réduite fonctionne aussi :
 
@@ -88,7 +89,7 @@ dans un **PowerShell administrateur** :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin"
+$names = "traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools"
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
@@ -227,6 +228,11 @@ la création et la navigation dans les buckets, toute l'administration passe par
 pour du développement local non exposé ; à remplacer par Garage, SeaweedFS ou RustFS
 si ce point devient gênant.
 
+**it-tools est figé sur sa dernière version stable**, `2024.10.22-7ca5933`, seule image
+taguée publiée depuis. Le développement continue sur le tag `nightly`, reconstruit
+régulièrement mais non versionné : à utiliser seulement si un outil récent manque,
+en acceptant qu'une mise à jour puisse changer le comportement sans préavis.
+
 ## Dépannage
 
 **Le port 80 est déjà pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
@@ -234,6 +240,11 @@ si ce point devient gênant.
 
 **Une URL `.test` renvoie 404 juste après le démarrage.** Le service répond mais n'est pas
 encore prêt. Neo4j est le plus lent. Vérifier avec `docker compose ps` que la santé est verte.
+
+**Un service tout juste ajouté renvoie 404 derrière Traefik.** Le proxy n'expose que les
+conteneurs sains : tant que le healthcheck est en `starting`, aucune route n'est créée.
+Si le conteneur est `healthy` et que le 404 persiste, Traefik a manqué l'événement Docker,
+un `docker compose restart traefik` relit l'inventaire.
 
 **`.test` ne résout pas.** Les entrées du fichier hosts sont manquantes, voir plus haut.
 En attendant, utiliser l'équivalent en `.localhost` dans le navigateur.

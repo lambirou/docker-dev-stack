@@ -62,7 +62,8 @@ try {
         @{ Name = 'meilisearch'; Url = 'http://localhost:' + $cfg['MEILI_PORT'] + '/health' },
         @{ Name = 'minio'; Url = 'http://localhost:' + $cfg['MINIO_API_PORT'] + '/minio/health/live' },
         @{ Name = 'mailpit'; Url = 'http://localhost:' + $cfg['MAILPIT_UI_PORT'] + '/api/v1/info' },
-        @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' }
+        @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' },
+        @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' }
     )
     foreach ($ep in $endpoints) {
         $code = Get-HttpCode -Url $ep.Url
