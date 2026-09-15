@@ -179,7 +179,7 @@ services:
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_DASHBOARD_PORT:-8090}:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
       - ./config/traefik/certs:/etc/traefik/certs:ro
     labels:
@@ -318,7 +318,7 @@ services:
       TZ: ${TZ:-Africa/Abidjan}
     ports: ["${DOCKHAND_PORT:-8082}:3000"]
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - dockhand-data:/app/data
     labels:
       traefik.enable: "true"

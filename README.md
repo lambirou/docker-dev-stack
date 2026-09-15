@@ -26,68 +26,106 @@ Chaque service reste joignable en direct sur son port : le proxy est un confort,
 
 ## Installation
 
-Tout est scriptable. Depuis la racine du dépôt, dans un PowerShell **administrateur** :
+Tout est scriptable, sur les trois systèmes. Les scripts sont idempotents :
+les relancer ne casse rien et ne duplique rien.
+
+**Windows** — dans un PowerShell **administrateur** :
 
 ```powershell
 .\scripts\install.ps1 -WithHosts -WithTls
 ```
 
-Le script installe Docker Desktop s'il manque, crée le `.env`, télécharge les images,
+**macOS, Linux et WSL** — dans un terminal ordinaire, `sudo` est demandé au moment voulu :
+
+```bash
+chmod +x scripts/*.sh          # une seule fois, si le bit exécutable manque
+./scripts/install.sh --with-hosts --with-tls
+```
+
+Le script installe Docker s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
 certificats HTTPS, puis vérifie les 37 points de contrôle.
 
-Sans droits administrateur, la version réduite fonctionne aussi :
-
-```powershell
-.\scripts\install.ps1
-```
-
-Les deux options qui touchent la machine sont alors ignorées et signalées en fin
-d'exécution. Le script est idempotent : le relancer ne casse rien et ne duplique rien.
+Sans droits élevés, la version réduite fonctionne aussi — `.\scripts\install.ps1`
+ou `./scripts/install.sh`. Les deux options qui touchent la machine sont alors
+ignorées et signalées en fin d'exécution.
 
 ### Les scripts
 
-| Script | Rôle | Admin |
+Chaque script existe en deux versions au comportement identique : `.ps1` pour
+Windows, `.sh` pour macOS, Linux et WSL.
+
+| Script | Rôle | Droits élevés |
 | --- | --- | --- |
-| `install.ps1` | Orchestrateur complet | selon les options |
-| `install-docker.ps1` | Installe Docker Desktop et attend le moteur | oui si absent |
-| `setup-hosts.ps1` | Écrit les entrées `.test` dans le fichier hosts | oui |
-| `setup-tls.ps1` | Installe mkcert et génère les certificats | oui |
-| `verify.ps1` | Contrôle santé et routage de toute la stack | non |
-| `lib.ps1` | Fonctions partagées, non exécutable seul | - |
+| `install` | Orchestrateur complet | selon les options |
+| `install-docker` | Installe Docker et attend le moteur | oui si absent |
+| `setup-hosts` | Écrit les entrées `.test` dans le fichier hosts | oui |
+| `setup-tls` | Installe mkcert et génère les certificats | oui |
+| `verify` | Contrôle santé et routage de toute la stack | non |
+| `lib` | Fonctions partagées, non exécutable seul | - |
 
-Options de `install.ps1` : `-SkipDocker` saute la vérification Docker, `-WithHosts`
-ajoute les domaines `.test`, `-WithTls` génère les certificats, `-NoVerify` saute
-le contrôle final.
+Les options de l'orchestrateur se correspondent une à une :
 
-Pour retirer les entrées du fichier hosts : `.\scripts\setup-hosts.ps1 -Remove`.
+| Effet | Windows | macOS / Linux |
+| --- | --- | --- |
+| Sauter la vérification Docker | `-SkipDocker` | `--skip-docker` |
+| Ajouter les domaines `.test` | `-WithHosts` | `--with-hosts` |
+| Générer les certificats | `-WithTls` | `--with-tls` |
+| Sauter le contrôle final | `-NoVerify` | `--no-verify` |
+| Répondre oui à tout | - | `-y` |
+
+Pour retirer les entrées du fichier hosts : `.\scripts\setup-hosts.ps1 -Remove`
+ou `./scripts/setup-hosts.sh --remove`.
 
 ### Installation manuelle
 
-```powershell
-Copy-Item .env.example .env   # puis ajuster les mots de passe
+```bash
+cp .env.example .env     # Copy-Item .env.example .env sous Windows
 docker compose up -d
 docker compose ps
 ```
 
 ## Prérequis
 
-Docker Desktop. Validé avec Docker 29.7.2 et Compose v5.5.1.
+| Système | Moteur | Installé par le script via |
+| --- | --- | --- |
+| Windows 10/11 | Docker Desktop (WSL 2) | winget |
+| macOS 13+ | Docker Desktop | Homebrew |
+| Linux, WSL | Docker Engine + plugin compose v2 | get.docker.com |
+
+Validé avec Docker 29.7.2 et Compose v5.5.1. Compose **v2** est obligatoire :
+le `docker-compose` v1 de certains dépôts ne connaît pas `--wait`.
+
+Sur macOS, OrbStack et Colima font aussi l'affaire à la place de Docker Desktop.
+Sur Linux, ton compte doit appartenir au groupe `docker` : le script l'ajoute,
+mais il faut fermer puis rouvrir la session pour que ça prenne effet.
+
 Le premier démarrage télécharge environ 2 Go d'images. Neo4j met 20 à 30 secondes
 à devenir sain, les autres services sont prêts en quelques secondes.
 
+### Moteurs Docker alternatifs
+
+Traefik et Dockhand ont besoin de parler au moteur par son socket. Docker Desktop
+et Docker Engine l'exposent sur `/var/run/docker.sock`, mais pas Colima
+(`~/.colima/default/docker.sock`), Rancher Desktop ni Podman. `install.sh` lit le
+contexte Docker courant et renseigne `DOCKER_SOCKET` dans le `.env` ; en
+installation manuelle, il suffit de remplir cette variable soi-même.
+
 ## Noms de domaine en .test
 
-Windows ne résout ni `.test` ni `.localhost` au niveau DNS. Les navigateurs mappent
-`*.localhost` sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`.
-Pour activer les URL `.test` partout, y compris depuis `curl` et le code applicatif,
-dans un **PowerShell administrateur** :
+Aucun système ne résout `.test` au niveau DNS. Les navigateurs mappent `*.localhost`
+sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les URL
+`.test` partout, y compris depuis `curl` et le code applicatif :
 
 ```powershell
-.\scripts\setup-hosts.ps1
+.\scripts\setup-hosts.ps1          # Windows, PowerShell administrateur
 ```
 
-Équivalent manuel :
+```bash
+./scripts/setup-hosts.sh           # macOS, Linux, WSL — sudo demandé
+```
+
+Équivalent manuel sous Windows :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
@@ -95,8 +133,19 @@ $names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
-Le fichier hosts de Windows ne gère pas les jokers : une ligne par nom, et une ligne
-de plus à chaque nouveau service.
+Et sous macOS ou Linux :
+
+```bash
+for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers; do
+  echo "127.0.0.1 $n.test" | sudo tee -a /etc/hosts >/dev/null
+done
+```
+
+Le fichier hosts ne gère les jokers sur aucun système : une ligne par nom, et une
+ligne de plus à chaque nouveau service. Sur macOS, `/etc/resolver/test` couplé à
+dnsmasq permet de router tout le TLD d'un coup ; sur Linux, dnsmasq ou
+systemd-resolved font la même chose. Les deux sortent du cadre de ces scripts,
+qui s'en tiennent au fichier hosts pour rester lisibles et réversibles.
 
 Chaque service répond sur deux domaines équivalents, par exemple `minio.test` et
 `minio.localhost`. Le second marche dans le navigateur sans toucher au fichier hosts.
@@ -110,13 +159,22 @@ Par défaut Traefik présente un certificat auto-signé qu'il génère lui-même
 mais le navigateur affiche un avertissement à chaque domaine.
 
 Pour des certificats reconnus par le navigateur, utiliser mkcert, qui installe une
-autorité de certification locale dans le magasin Windows :
+autorité de certification locale dans le magasin de confiance du système :
 
 ```powershell
-.\scripts\setup-tls.ps1
+.\scripts\setup-tls.ps1           # Windows
 ```
 
-Le script demande confirmation avant de toucher au magasin de certificats. Équivalent manuel :
+```bash
+./scripts/setup-tls.sh            # macOS, Linux, WSL
+```
+
+Le script demande confirmation avant de toucher au magasin de certificats, et
+installe mkcert lui-même : winget sous Windows, Homebrew sous macOS, le
+gestionnaire de paquets sous Linux — avec repli sur le binaire officiel dans
+`~/.local/bin` quand la distribution ne le fournit pas.
+
+Équivalent manuel sous Windows :
 
 ```powershell
 winget install FiloSottile.mkcert
@@ -127,6 +185,23 @@ cd ..\..\..
 Copy-Item config\traefik\dynamic\tls.yml.example config\traefik\dynamic\tls.yml
 docker compose restart traefik
 ```
+
+Et sous macOS ou Linux :
+
+```bash
+brew install mkcert nss                      # macOS
+sudo apt install mkcert libnss3-tools        # Debian, Ubuntu
+mkcert -install
+cd config/traefik/certs
+mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" localhost 127.0.0.1 ::1
+chmod 0644 local.pem local-key.pem           # Traefik lit la clé en non-root
+cd ../../..
+cp config/traefik/dynamic/tls.yml.example config/traefik/dynamic/tls.yml
+docker compose restart traefik
+```
+
+Le paquet nss / libnss3-tools n'est pas décoratif : sans lui, mkcert installe
+l'autorité pour le système mais pas pour Firefox, qui tient son propre magasin.
 
 À savoir avant de lancer `mkcert -install` : la commande ajoute une autorité racine
 au magasin de certificats de la machine. C'est le prix à payer pour du HTTPS local
@@ -172,7 +247,7 @@ l'écran, chaînes de connexion comprises.
 
 Après une modification du `.env`, recréer le conteneur pour que le portail suive :
 
-```powershell
+```bash
 docker compose up -d portal
 ```
 
@@ -190,6 +265,9 @@ Les données des bases sont dans des **volumes Docker nommés**, pas dans `./dat
 Ce choix est imposé par Windows : Postgres refuse de démarrer sur un montage de disque
 Windows car il exige des permissions `0700` sur son répertoire, impossible à obtenir là.
 MariaDB et Neo4j ont le même genre de contrainte.
+Le même choix sert la portabilité : les volumes nommés se comportent de façon
+identique sur les trois systèmes, là où un bind mount dépend du système de
+fichiers de l'hôte.
 
 Le dossier `./data` sert de zone d'échange avec l'hôte :
 
@@ -204,13 +282,19 @@ Le dossier `./data` sert de zone d'échange avec l'hôte :
 Le dossier `./config` contient la configuration montée en lecture seule : script
 d'initialisation Postgres, fichier de réglages MariaDB, configuration dynamique Traefik.
 
+Sous Linux, ces dossiers d'échange ont une contrainte de plus : les conteneurs y
+écrivent sous leur propre uid (999 pour Postgres, 7474 pour Neo4j), qui n'est pas
+le tien. `install.sh` leur applique donc `chmod 0777` — acceptable sur un poste de
+développement, à ne pas reproduire ailleurs. Windows et macOS n'ont pas ce problème :
+leurs montages sont traduits par le moteur Docker.
+
 Le script `config/postgres/init/01-extensions.sql` active `vector`, `pg_trgm` et
 `uuid-ossp`. Il ne s'exécute qu'au tout premier démarrage, quand le volume est vide.
 Le modifier plus tard n'a aucun effet sans `docker compose down -v`, qui détruit les données.
 
 ## Commandes utiles
 
-```powershell
+```bash
 docker compose up -d                 # démarrer
 docker compose stop                  # arrêter sans rien perdre
 docker compose down                  # supprimer les conteneurs, garder les volumes
@@ -222,7 +306,7 @@ docker stats --no-stream             # consommation mémoire
 
 Accès aux consoles :
 
-```powershell
+```bash
 docker compose exec postgres psql -U dev -d devdb
 docker compose exec mariadb mariadb -udev -pdevpass devdb
 docker compose exec redis redis-cli -a devpass
@@ -232,9 +316,10 @@ docker compose exec neo4j cypher-shell -u neo4j -p devpassword
 ## Sauvegarde et restauration
 
 Les dumps s'écrivent dans le conteneur vers `/backups`, qui correspond à `./data/<service>`
-sur l'hôte. Ça évite les problèmes d'encodage des redirections PowerShell.
+sur l'hôte. Ça évite les problèmes d'encodage des redirections PowerShell, et ça
+donne la même commande sur les trois systèmes.
 
-```powershell
+```bash
 docker compose exec postgres sh -c 'pg_dump -U dev devdb > /backups/devdb.sql'
 docker compose exec postgres sh -c 'psql -U dev devdb < /backups/devdb.sql'
 
@@ -274,7 +359,9 @@ exclus. Le compte administrateur se crée au premier accès à l'interface, il n
 ## Dépannage
 
 **Le port 80 est déjà pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
-`http://minio.test:8000`. Sous Windows, le coupable habituel est IIS ou un service http.sys.
+`http://minio.test:8000`. Sous Windows, le coupable habituel est IIS ou un service
+http.sys ; sous Linux, Apache ou nginx installés par la distribution ; sous macOS,
+le serveur web d'un autre environnement de développement.
 
 **Une URL `.test` renvoie 404 juste après le démarrage.** Le service répond mais n'est pas
 encore prêt. Neo4j est le plus lent. Vérifier avec `docker compose ps` que la santé est verte.
@@ -289,6 +376,37 @@ En attendant, utiliser l'équivalent en `.localhost` dans le navigateur.
 
 **Le navigateur refuse le certificat.** Normal tant que mkcert n'est pas installé :
 le certificat auto-signé de Traefik n'est reconnu par personne.
+
+**`permission denied` sur `/var/run/docker.sock` (Linux).** Ton compte n'est pas dans
+le groupe `docker`. `sudo usermod -aG docker $USER`, puis fermer et rouvrir la session.
+
+**Traefik et Dockhand ne voient aucun conteneur (macOS, Colima, Rancher, Podman).**
+Le socket du moteur n'est pas à l'emplacement standard. Renseigner `DOCKER_SOCKET`
+dans le `.env` avec le chemin réel, que donne
+`docker context inspect --format '{{.Endpoints.docker.Host}}'`, puis
+`docker compose up -d traefik dockhand`.
+
+**Les conteneurs ne peuvent pas écrire dans `./data` (Linux).** Ils tournent sous un
+uid qui n'est pas le tien : `chmod 0777 data/*` règle le cas sur un poste de
+développement.
+
+**Traefik ne lit pas `./config` sur Fedora, RHEL ou CentOS.** SELinux bloque l'accès
+aux montages non étiquetés. Étiqueter les dossiers une fois pour toutes avec
+`chcon -Rt svirt_sandbox_file_t config data`, ou ajouter le suffixe `,z` aux
+montages concernés dans `docker-compose.yml`.
+
+**`bash: ./scripts/install.sh: Permission denied`.** Le bit exécutable manque après le
+clone : `chmod +x scripts/*.sh`.
+
+**`/usr/bin/env: 'bash\r': No such file or directory`.** Le dépôt a été cloné avec
+`core.autocrlf=true` et les scripts sont arrivés en CRLF. Le `.gitattributes` du dépôt
+force pourtant le LF sur les `.sh` : `dos2unix scripts/*.sh` répare l'existant,
+`git config core.autocrlf input` évite la récidive.
+
+**Les ports privilégiés 80 et 443 échouent en Docker rootless (Linux).** Le démon
+rootless ne peut pas les lier. Soit autoriser
+`sudo sysctl net.ipv4.ip_unprivileged_port_start=80`, soit passer `TRAEFIK_HTTP_PORT`
+et `TRAEFIK_HTTPS_PORT` à 8000 et 8443 dans le `.env`.
 
 **Traefik affiche un avertissement `aliasHeadersStrategy` au démarrage.** Recommandation
 de durcissement de Traefik v3.7 concernant l'usurpation d'en-têtes vers les backends PHP.
