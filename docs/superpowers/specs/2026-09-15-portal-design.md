@@ -53,7 +53,9 @@ portal/
     index.css             # @import "tailwindcss" + bloc @theme
     data/services.js      # source de vérité : la liste des services
     data/recherche.js     # index Fuse.js et fonction de recherche
+    data/config.js        # résolution des gabarits ${VARIABLE} à l'exécution
     hooks/useHealth.js    # sonde périodique
+    hooks/useConfig.js    # chargement de /config.json
     hooks/useTheme.js     # bascule sombre/clair, persistée
     components/
       Header.jsx          # titre, recherche, bascule de thème, rafraîchissement
@@ -61,11 +63,14 @@ portal/
       ServiceCard.jsx     # une carte
       StatusDot.jsx       # pastille d'état
       CopyButton.jsx      # copie dans le presse-papier
+      Infobulle.jsx       # infobulle Base UI, remplace l'attribut title
+      Icons.jsx           # noms français -> icônes Lucide, tailles par défaut
 ```
 
 Stack : Vite 7, React 19, Tailwind CSS v4 (configuration CSS-first via `@theme`, sans
-`tailwind.config.js`) et Fuse.js pour la recherche. JavaScript et non TypeScript : le
-reste du dépôt n'en utilise pas.
+`tailwind.config.js`), Fuse.js pour la recherche et Base UI pour les primitives
+d'interface, Lucide pour les icônes. JavaScript et non TypeScript : le reste du dépôt
+n'en utilise pas.
 
 ## Modèle de données
 
@@ -153,6 +158,47 @@ Page unique, thème sombre par défaut, bascule vers le thème clair persistée 
   corpus indexé : à 0,35, un terme court comme `rag` remontait toute la stack. Les
   sections vides disparaissent. Le regroupement par catégorie est conservé pendant la
   recherche, donc le classement Fuse ne joue qu'à l'intérieur de chaque section.
+
+## Bibliothèque de composants
+
+`@base-ui/react` fournit les primitives d'interaction. Elle est sans style : les classes
+Tailwind du portail s'appliquent telles quelles, et les états sont exposés en attributs
+`data-*` (`data-pressed`, `data-panel-open`, `data-starting-style`), donc stylables sans
+état React dédié. Trois primitives sont utilisées :
+
+| Primitive | Remplace | Apport |
+| --- | --- | --- |
+| `Tooltip` | l'attribut `title` | Style, délai partagé entre boutons, positionnement qui évite les bords, fermeture au clavier. |
+| `Collapsible` | `<details>/<summary>` | `aria-expanded`/`aria-controls`, et hauteur mesurée exposée en variable CSS pour animer l'ouverture. |
+| `Toggle` | un `<button aria-pressed>` manuel | État pressé géré et exposé en `data-pressed`. |
+
+Base UI décrit l'infobulle comme une aide pour les personnes voyantes : elle ne pose pas
+de `role="tooltip"` ni de `aria-describedby`. Chaque bouton d'icône garde donc son
+`aria-label`, qui reste la seule source pour les lecteurs d'écran.
+
+Un bouton désactivé ne reçoit aucun événement de pointeur. L'infobulle qui explique
+pourquoi la bascule des identifiants est inerte est donc accrochée à une enveloppe, pas
+au bouton lui-même.
+
+Le coût est un bundle qui passe de 273 à 372 ko (87 à 121 ko compressés) — accepté pour
+une page servie en local, à réévaluer si le portail devait sortir du poste de travail.
+
+## Icônes
+
+`lucide-react` remplace les treize tracés SVG écrits à la main. `components/Icons.jsx`
+reste le seul point de contact : il traduit les noms français utilisés dans les
+composants (`IconeLoupe`, `IconeOeilBarre`) vers les composants Lucide et impose les
+valeurs par défaut. Aucun autre fichier n'importe `lucide-react`, donc changer une icône
+ne touche qu'une ligne, et le champ `icone` des catégories de `services.js` continue de
+désigner une clé abstraite plutôt qu'un nom de bibliothèque.
+
+Le trait est ramené de 2 à 1,8 : Lucide dessine sur une grille de 24 px, et à 16 px le
+trait d'origine pèse à côté du texte. Les tailles particulières (12 px pour le lien
+externe, 13 px pour le chevron, 14 px pour les en-têtes de catégorie) restent passées
+par les appelants, qui priment sur la valeur par défaut.
+
+Les imports sont nommés : seules les treize icônes utilisées entrent dans le bundle,
+soit 4 ko de plus (+2 ko compressés).
 
 ## Identifiants
 

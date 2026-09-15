@@ -1,8 +1,14 @@
 import { useEffect, useRef } from "react";
+import { Toggle } from "@base-ui/react/toggle";
 import { IconeLune, IconeOeil, IconeOeilBarre, IconeRafraichir, IconeSoleil } from "./Icons.jsx";
+import Infobulle from "./Infobulle.jsx";
 
 const bouton =
-  "inline-flex size-9 items-center justify-center rounded-lg border border-bord bg-surface/70 text-attenue transition hover:border-bord-vif hover:text-texte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "inline-flex size-9 items-center justify-center rounded-lg border border-bord bg-surface/70 text-attenue transition hover:border-bord-vif hover:text-texte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-disabled:cursor-not-allowed data-disabled:opacity-40";
+
+// Le bouton des identifiants porte un état visible : Base UI expose data-pressed, il n'y
+// a donc rien à dériver côté React pour le styler.
+const boutonEtat = bouton + " data-pressed:border-accent/50 data-pressed:text-accent";
 
 function heure(date) {
   if (!date) return "jamais";
@@ -24,6 +30,13 @@ export default function Header({
   configDisponible,
 }) {
   const champ = useRef(null);
+
+  const libelleTheme = theme === "clair" ? "Passer en thème sombre" : "Passer en thème clair";
+  const libelleSecrets = !configDisponible
+    ? "config.json n'a pas été chargé : aucune valeur à dévoiler"
+    : secretsVisibles
+      ? "Masquer les identifiants"
+      : "Afficher les identifiants en clair";
 
   useEffect(() => {
     function surTouche(evenement) {
@@ -57,41 +70,46 @@ export default function Header({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onRafraichir}
-            className={bouton}
-            title="Relancer les sondes"
-            aria-label="Relancer les sondes"
-          >
-            <IconeRafraichir className={enCours ? "animate-spin" : undefined} />
-          </button>
-          <button
-            type="button"
-            onClick={onBasculerSecrets}
-            disabled={!configDisponible}
-            aria-pressed={secretsVisibles}
-            className={bouton + " disabled:cursor-not-allowed disabled:opacity-40"}
-            title={
-              configDisponible
-                ? secretsVisibles
-                  ? "Masquer les identifiants"
-                  : "Afficher les identifiants"
-                : "Identifiants indisponibles : config.json n'a pas été chargé"
-            }
-            aria-label={secretsVisibles ? "Masquer les identifiants" : "Afficher les identifiants"}
-          >
-            {secretsVisibles ? <IconeOeilBarre /> : <IconeOeil />}
-          </button>
-          <button
-            type="button"
-            onClick={onBasculerTheme}
-            className={bouton}
-            title={theme === "clair" ? "Passer en thème sombre" : "Passer en thème clair"}
-            aria-label={theme === "clair" ? "Passer en thème sombre" : "Passer en thème clair"}
-          >
-            {theme === "clair" ? <IconeLune /> : <IconeSoleil />}
-          </button>
+          <Infobulle texte="Relancer les sondes">
+            <button
+              type="button"
+              onClick={onRafraichir}
+              className={bouton}
+              aria-label="Relancer les sondes"
+            >
+              <IconeRafraichir className={enCours ? "animate-spin" : undefined} />
+            </button>
+          </Infobulle>
+
+          {/* Un bouton désactivé ne reçoit aucun événement de pointeur : l'infobulle est
+              donc accrochée à l'enveloppe, sinon l'explication resterait invisible dans
+              le seul cas où elle est utile. */}
+          <Infobulle texte={libelleSecrets}>
+            <span className="inline-flex">
+              <Toggle
+                pressed={secretsVisibles}
+                onPressedChange={onBasculerSecrets}
+                disabled={!configDisponible}
+                className={boutonEtat}
+                aria-label={
+                  secretsVisibles ? "Masquer les identifiants" : "Afficher les identifiants"
+                }
+              >
+                {secretsVisibles ? <IconeOeilBarre /> : <IconeOeil />}
+              </Toggle>
+            </span>
+          </Infobulle>
+
+          <Infobulle texte={libelleTheme}>
+            <Toggle
+              pressed={theme === "clair"}
+              onPressedChange={onBasculerTheme}
+              className={bouton}
+              aria-label={libelleTheme}
+            >
+              {theme === "clair" ? <IconeLune /> : <IconeSoleil />}
+            </Toggle>
+          </Infobulle>
         </div>
       </div>
 

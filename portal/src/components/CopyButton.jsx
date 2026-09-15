@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { IconeCheck, IconeCopie } from "./Icons.jsx";
+import Infobulle from "./Infobulle.jsx";
 
 async function ecrirePressePapier(valeur) {
   if (navigator.clipboard?.writeText) {
@@ -35,15 +36,20 @@ export default function CopyButton({ valeur, libelle }) {
     }
   }
 
+  const intitule = copie ? "Copié" : "Copier " + (libelle ?? valeur);
+
   return (
-    <button
-      type="button"
-      onClick={copier}
-      title={copie ? "Copié" : "Copier " + (libelle ?? valeur)}
-      aria-label={copie ? "Copié" : "Copier " + (libelle ?? valeur)}
-      className="rounded-md p-1 text-attenue transition hover:bg-relief hover:text-texte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-    >
-      {copie ? <IconeCheck className="text-ok" /> : <IconeCopie />}
-    </button>
+    // L'infobulle reste ouverte au clic : c'est elle qui confirme la copie, en écho
+    // au passage de l'icône au vert.
+    <Infobulle texte={intitule} fermerAuClic={false}>
+      <button
+        type="button"
+        onClick={copier}
+        aria-label={intitule}
+        className="rounded-md p-1 text-attenue transition hover:bg-relief hover:text-texte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        {copie ? <IconeCheck className="text-ok" /> : <IconeCopie />}
+      </button>
+    </Infobulle>
   );
 }

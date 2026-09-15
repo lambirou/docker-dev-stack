@@ -1,6 +1,8 @@
+import { Collapsible } from "@base-ui/react/collapsible";
 import CopyButton from "./CopyButton.jsx";
+import Infobulle from "./Infobulle.jsx";
 import StatusDot from "./StatusDot.jsx";
-import { IconeLien } from "./Icons.jsx";
+import { IconeChevron, IconeLien } from "./Icons.jsx";
 import { preparer } from "../data/config.js";
 
 const chip =
@@ -75,45 +77,57 @@ export default function ServiceCard({ service, etat, config, secretsVisibles }) 
       )}
 
       {identifiants.length > 0 && (
-        <details className="rounded-lg border border-bord bg-relief/50">
-          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-attenue transition hover:text-texte">
+        <Collapsible.Root className="rounded-lg border border-bord bg-relief/50">
+          <Collapsible.Trigger className="group flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-medium text-attenue transition hover:text-texte focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
             Identifiants
-          </summary>
-          <dl className="space-y-1.5 border-t border-bord px-3 py-2.5">
-            {lignes.map((ligne) => (
-              <div key={ligne.label} className="flex items-center justify-between gap-3">
-                <dt className="shrink-0 text-[11px] text-attenue">{ligne.label}</dt>
-                <dd className="flex min-w-0 items-center gap-1">
-                  <code
-                    title={
-                      ligne.indisponible
-                        ? "Variable absente de config.json : seul son nom est affiché"
-                        : undefined
-                    }
-                    className={
-                      "truncate font-mono text-[11px] " +
-                      (ligne.indisponible ? "text-accent" : "text-texte")
-                    }
-                  >
-                    {ligne.affichage}
-                  </code>
-                  <CopyButton valeur={ligne.valeur} libelle={ligne.label} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-          {aUneValeurManquante ? (
-            <p className="border-t border-bord px-3 py-2 text-[11px] leading-snug text-attenue">
-              Les entrées en couleur nomment une variable absente de{" "}
-              <code className="font-mono">config.json</code> : renseignez-la dans{" "}
-              <code className="font-mono">.env</code>, puis redémarrez le portail.
-            </p>
-          ) : aUneValeurMasquee ? (
-            <p className="border-t border-bord px-3 py-2 text-[11px] leading-snug text-attenue">
-              Valeurs masquées à l'écran. Le bouton de copie renvoie la valeur réelle.
-            </p>
-          ) : null}
-        </details>
+            <IconeChevron
+              width={13}
+              height={13}
+              className="transition-transform duration-200 ease-out group-data-panel-open:rotate-90"
+            />
+          </Collapsible.Trigger>
+          {/* La hauteur du panneau est mesurée par Base UI et exposée en variable CSS,
+              ce qui permet d'animer l'ouverture sans la figer dans le code. */}
+          <Collapsible.Panel className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
+            <dl className="space-y-1.5 border-t border-bord px-3 py-2.5">
+              {lignes.map((ligne) => (
+                <div key={ligne.label} className="flex items-center justify-between gap-3">
+                  <dt className="shrink-0 text-[11px] text-attenue">{ligne.label}</dt>
+                  <dd className="flex min-w-0 items-center gap-1">
+                    <Infobulle
+                      texte={
+                        ligne.indisponible
+                          ? "Variable absente de config.json : seul son nom est affiché"
+                          : null
+                      }
+                    >
+                      <code
+                        className={
+                          "truncate font-mono text-[11px] " +
+                          (ligne.indisponible ? "text-accent" : "text-texte")
+                        }
+                      >
+                        {ligne.affichage}
+                      </code>
+                    </Infobulle>
+                    <CopyButton valeur={ligne.valeur} libelle={ligne.label} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {aUneValeurManquante ? (
+              <p className="border-t border-bord px-3 py-2 text-[11px] leading-snug text-attenue">
+                Les entrées en couleur nomment une variable absente de{" "}
+                <code className="font-mono">config.json</code> : renseignez-la dans{" "}
+                <code className="font-mono">.env</code>, puis redémarrez le portail.
+              </p>
+            ) : aUneValeurMasquee ? (
+              <p className="border-t border-bord px-3 py-2 text-[11px] leading-snug text-attenue">
+                Valeurs masquées à l'écran. Le bouton de copie renvoie la valeur réelle.
+              </p>
+            ) : null}
+          </Collapsible.Panel>
+        </Collapsible.Root>
       )}
 
       <footer className="mt-auto pt-1">

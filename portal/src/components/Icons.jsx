@@ -1,125 +1,47 @@
-const commun = {
-  width: 16,
-  height: 16,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
-};
+// Toutes les icônes du portail passent par ce fichier. Il fait la correspondance entre
+// les noms français employés dans les composants et le jeu Lucide, et fixe les valeurs
+// par défaut communes. Les composants appelants n'importent jamais lucide-react
+// directement : changer une icône se fait ici, en une ligne.
+//
+// Pour en ajouter une : choisir dans https://lucide.dev/icons, l'importer nommément
+// ci-dessous et l'exporter. Seules les icônes importées entrent dans le bundle.
+import {
+  Box,
+  Check,
+  ChevronRight,
+  Copy,
+  Database,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Moon,
+  RefreshCw,
+  Search,
+  Sun,
+  Wrench,
+} from "lucide-react";
 
-export function IconeBase(props) {
-  return (
-    <svg {...commun} {...props}>
-      <ellipse cx="12" cy="5.5" rx="7.5" ry="3" />
-      <path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6" />
-      <path d="M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6" />
-    </svg>
-  );
-}
+// Lucide dessine sur une grille de 24 px avec un trait de 2. Ramené à 16 px, ce trait
+// alourdit le texte voisin : 1,8 conserve le rendu des icônes dessinées à la main qui
+// occupaient cette place. Les appelants surchargent width et height au besoin, et
+// l'attribut aria-hidden est posé par Lucide tant qu'aucune propriété ARIA n'est fournie.
+const commun = { size: 16, strokeWidth: 1.8 };
 
-export function IconeLoupe(props) {
-  return (
-    <svg {...commun} {...props}>
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="m15.5 15.5 4.5 4.5" />
-    </svg>
-  );
-}
+export const IconeBase = (props) => <Database {...commun} {...props} />;
+export const IconeLoupe = (props) => <Search {...commun} {...props} />;
+export const IconeBoite = (props) => <Box {...commun} {...props} />;
+export const IconeOutil = (props) => <Wrench {...commun} {...props} />;
+export const IconeLien = (props) => <ExternalLink {...commun} {...props} />;
+export const IconeCopie = (props) => <Copy {...commun} {...props} />;
+export const IconeCheck = (props) => <Check {...commun} {...props} />;
+export const IconeChevron = (props) => <ChevronRight {...commun} {...props} />;
+export const IconeRafraichir = (props) => <RefreshCw {...commun} {...props} />;
+export const IconeSoleil = (props) => <Sun {...commun} {...props} />;
+export const IconeLune = (props) => <Moon {...commun} {...props} />;
+export const IconeOeil = (props) => <Eye {...commun} {...props} />;
+export const IconeOeilBarre = (props) => <EyeOff {...commun} {...props} />;
 
-export function IconeBoite(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-      <path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
-    </svg>
-  );
-}
-
-export function IconeOutil(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M14.7 6.3a4 4 0 0 0 5.2 5.2l-8 8a2.8 2.8 0 0 1-4-4l8-8Z" />
-      <path d="M6.5 17.5h.01" />
-    </svg>
-  );
-}
-
-export function IconeLien(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M14 4h6v6" />
-      <path d="M20 4 10.5 13.5" />
-      <path d="M18 14v5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10" />
-    </svg>
-  );
-}
-
-export function IconeCopie(props) {
-  return (
-    <svg {...commun} {...props}>
-      <rect x="9" y="9" width="11" height="11" rx="2" />
-      <path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15" />
-    </svg>
-  );
-}
-
-export function IconeCheck(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="m5 12.5 4.5 4.5L19 7" />
-    </svg>
-  );
-}
-
-export function IconeRafraichir(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M20 11a8 8 0 1 0-.7 4.5" />
-      <path d="M20 4.5V11h-6.5" />
-    </svg>
-  );
-}
-
-export function IconeOeil(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-export function IconeOeilBarre(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M4 4.5 20 20.5" />
-      <path d="M9.9 6.1A9.8 9.8 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.3 4.1" />
-      <path d="M6.6 8.2A17 17 0 0 0 2.5 12S6 18.5 12 18.5a9.6 9.6 0 0 0 3.5-.6" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-    </svg>
-  );
-}
-
-export function IconeSoleil(props) {
-  return (
-    <svg {...commun} {...props}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
-    </svg>
-  );
-}
-
-export function IconeLune(props) {
-  return (
-    <svg {...commun} {...props}>
-      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
-    </svg>
-  );
-}
-
+// Clés utilisées par le champ `icone` des catégories dans data/services.js.
 export const iconesCategorie = {
   base: IconeBase,
   loupe: IconeLoupe,
