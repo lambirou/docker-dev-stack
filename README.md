@@ -1,11 +1,11 @@
 # Dev Stack Docker
 
-Environnement de developpement local : bases relationnelles, moteurs vectoriels, recherche,
-graphe, cache, stockage objet et outillage, le tout derriere un reverse proxy Traefik.
+Environnement de développement local : bases relationnelles, moteurs vectoriels, recherche,
+graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy Traefik.
 
 ## Services
 
-| Service | Image | Role | URL | Port direct |
+| Service | Image | Rôle | URL | Port direct |
 | --- | --- | --- | --- | --- |
 | postgres | `pgvector/pgvector:pg17` | Relationnel + vecteurs | - | 5432 |
 | mariadb | `mariadb:12.3` | Relationnel | - | 3306 |
@@ -19,45 +19,45 @@ graphe, cache, stockage objet et outillage, le tout derriere un reverse proxy Tr
 | mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.test | UI 8025, SMTP 1025 |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
 
-Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage oblige.
+Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
 
 ## Installation
 
-Tout est scriptable. Depuis la racine du depot, dans un PowerShell **administrateur** :
+Tout est scriptable. Depuis la racine du dépôt, dans un PowerShell **administrateur** :
 
 ```powershell
 .\scripts\install.ps1 -WithHosts -WithTls
 ```
 
-Le script installe Docker Desktop s'il manque, cree le `.env`, telecharge les images,
-demarre les services, ajoute les domaines `.test` au fichier hosts, genere les
-certificats HTTPS, puis verifie les 28 points de controle.
+Le script installe Docker Desktop s'il manque, crée le `.env`, télécharge les images,
+démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
+certificats HTTPS, puis vérifie les 28 points de contrôle.
 
-Sans droits administrateur, la version reduite fonctionne aussi :
+Sans droits administrateur, la version réduite fonctionne aussi :
 
 ```powershell
 .\scripts\install.ps1
 ```
 
-Les deux options qui touchent la machine sont alors ignorees et signalees en fin
-d'execution. Le script est idempotent : le relancer ne casse rien et ne duplique rien.
+Les deux options qui touchent la machine sont alors ignorées et signalées en fin
+d'exécution. Le script est idempotent : le relancer ne casse rien et ne duplique rien.
 
 ### Les scripts
 
-| Script | Role | Admin |
+| Script | Rôle | Admin |
 | --- | --- | --- |
 | `install.ps1` | Orchestrateur complet | selon les options |
 | `install-docker.ps1` | Installe Docker Desktop et attend le moteur | oui si absent |
-| `setup-hosts.ps1` | Ecrit les entrees `.test` dans le fichier hosts | oui |
-| `setup-tls.ps1` | Installe mkcert et genere les certificats | oui |
-| `verify.ps1` | Controle sante et routage de toute la stack | non |
-| `lib.ps1` | Fonctions partagees, non executable seul | - |
+| `setup-hosts.ps1` | Écrit les entrées `.test` dans le fichier hosts | oui |
+| `setup-tls.ps1` | Installe mkcert et génère les certificats | oui |
+| `verify.ps1` | Contrôle santé et routage de toute la stack | non |
+| `lib.ps1` | Fonctions partagées, non exécutable seul | - |
 
-Options de `install.ps1` : `-SkipDocker` saute la verification Docker, `-WithHosts`
-ajoute les domaines `.test`, `-WithTls` genere les certificats, `-NoVerify` saute
-le controle final.
+Options de `install.ps1` : `-SkipDocker` saute la vérification Docker, `-WithHosts`
+ajoute les domaines `.test`, `-WithTls` génère les certificats, `-NoVerify` saute
+le contrôle final.
 
-Pour retirer les entrees du fichier hosts : `.\scripts\setup-hosts.ps1 -Remove`.
+Pour retirer les entrées du fichier hosts : `.\scripts\setup-hosts.ps1 -Remove`.
 
 ### Installation manuelle
 
@@ -67,15 +67,15 @@ docker compose up -d
 docker compose ps
 ```
 
-## Prerequis
+## Prérequis
 
-Docker Desktop. Valide avec Docker 29.7.2 et Compose v5.5.1.
-Le premier demarrage telecharge environ 2 Go d'images. Neo4j met 20 a 30 secondes
-a devenir sain, les autres services sont prets en quelques secondes.
+Docker Desktop. Validé avec Docker 29.7.2 et Compose v5.5.1.
+Le premier démarrage télécharge environ 2 Go d'images. Neo4j met 20 à 30 secondes
+à devenir sain, les autres services sont prêts en quelques secondes.
 
 ## Noms de domaine en .test
 
-Windows ne resout ni `.test` ni `.localhost` au niveau DNS. Les navigateurs mappent
+Windows ne résout ni `.test` ni `.localhost` au niveau DNS. Les navigateurs mappent
 `*.localhost` sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`.
 Pour activer les URL `.test` partout, y compris depuis `curl` et le code applicatif,
 dans un **PowerShell administrateur** :
@@ -84,7 +84,7 @@ dans un **PowerShell administrateur** :
 .\scripts\setup-hosts.ps1
 ```
 
-Equivalent manuel :
+Équivalent manuel :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
@@ -92,28 +92,28 @@ $names = "traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmya
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
-Le fichier hosts de Windows ne gere pas les jokers : une ligne par nom, et une ligne
-de plus a chaque nouveau service.
+Le fichier hosts de Windows ne gère pas les jokers : une ligne par nom, et une ligne
+de plus à chaque nouveau service.
 
-Chaque service repond sur deux domaines equivalents, par exemple `minio.test` et
+Chaque service répond sur deux domaines équivalents, par exemple `minio.test` et
 `minio.localhost`. Le second marche dans le navigateur sans toucher au fichier hosts.
 
 ## HTTPS
 
-Traefik ecoute sur le port 443 et sert **tous** les services en HTTPS. Le port 80
-reste actif en parallele : aucune redirection forcee, les deux protocoles fonctionnent.
+Traefik écoute sur le port 443 et sert **tous** les services en HTTPS. Le port 80
+reste actif en parallèle : aucune redirection forcée, les deux protocoles fonctionnent.
 
-Par defaut Traefik presente un certificat auto-signe qu'il genere lui-meme. Ca marche,
-mais le navigateur affiche un avertissement a chaque domaine.
+Par défaut Traefik présente un certificat auto-signé qu'il génère lui-même. Ça marche,
+mais le navigateur affiche un avertissement à chaque domaine.
 
 Pour des certificats reconnus par le navigateur, utiliser mkcert, qui installe une
-autorite de certification locale dans le magasin Windows :
+autorité de certification locale dans le magasin Windows :
 
 ```powershell
 .\scripts\setup-tls.ps1
 ```
 
-Le script demande confirmation avant de toucher au magasin de certificats. Equivalent manuel :
+Le script demande confirmation avant de toucher au magasin de certificats. Équivalent manuel :
 
 ```powershell
 winget install FiloSottile.mkcert
@@ -125,11 +125,11 @@ Copy-Item config\traefik\dynamic\tls.yml.example config\traefik\dynamic\tls.yml
 docker compose restart traefik
 ```
 
-A savoir avant de lancer `mkcert -install` : la commande ajoute une autorite racine
-au magasin de certificats de la machine. C'est le prix a payer pour du HTTPS local
-sans avertissement, et ca reste reversible avec `mkcert -uninstall`.
+À savoir avant de lancer `mkcert -install` : la commande ajoute une autorité racine
+au magasin de certificats de la machine. C'est le prix à payer pour du HTTPS local
+sans avertissement, et ça reste réversible avec `mkcert -uninstall`.
 
-Let's Encrypt n'est pas une option ici : les domaines `.test` ne sont pas resolvables
+Let's Encrypt n'est pas une option ici : les domaines `.test` ne sont pas résolvables
 publiquement, donc aucune validation ACME ne peut aboutir.
 
 Pour forcer la redirection HTTP vers HTTPS, ajouter au bloc `command` de traefik :
@@ -141,7 +141,7 @@ Pour forcer la redirection HTTP vers HTTPS, ajouter au bloc `command` de traefik
 
 ## Identifiants
 
-Tous definis dans `.env`, valeurs de developpement uniquement.
+Tous définis dans `.env`, valeurs de développement uniquement.
 
 | Service | Utilisateur | Mot de passe |
 | --- | --- | --- |
@@ -150,49 +150,49 @@ Tous definis dans `.env`, valeurs de developpement uniquement.
 | Neo4j | `neo4j` | `devpassword` |
 | Redis | - | `devpass` |
 | MinIO | `devadmin` | `devadminpass` |
-| Qdrant | cle API | `devkey` (en-tete `api-key`) |
-| Meilisearch | cle maitre | `devmasterkey_min16chars` |
+| Qdrant | clé API | `devkey` (en-tête `api-key`) |
+| Meilisearch | clé maître | `devmasterkey_min16chars` |
 
-Dans RedisInsight, ajouter la base avec l'hote `redis` et le port `6379` : la connexion
-part de l'interieur du reseau Docker, pas de `localhost`.
+Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
+part de l'intérieur du réseau Docker, pas de `localhost`.
 
-## Ou vivent les donnees
+## Où vivent les données
 
-Les donnees des bases sont dans des **volumes Docker nommes**, pas dans `./data`.
-Ce choix est impose par Windows : Postgres refuse de demarrer sur un montage de disque
-Windows car il exige des permissions `0700` sur son repertoire, impossible a obtenir la.
-MariaDB et Neo4j ont le meme genre de contrainte.
+Les données des bases sont dans des **volumes Docker nommés**, pas dans `./data`.
+Ce choix est imposé par Windows : Postgres refuse de démarrer sur un montage de disque
+Windows car il exige des permissions `0700` sur son répertoire, impossible à obtenir là.
+MariaDB et Neo4j ont le même genre de contrainte.
 
-Le dossier `./data` sert de zone d'echange avec l'hote :
+Le dossier `./data` sert de zone d'échange avec l'hôte :
 
-| Dossier hote | Monte dans | Usage |
+| Dossier hôte | Monté dans | Usage |
 | --- | --- | --- |
 | `data/postgres` | postgres:/backups | dumps SQL |
 | `data/mariadb` | mariadb:/backups | dumps SQL |
 | `data/qdrant` | qdrant:/qdrant/snapshots | snapshots |
 | `data/meilisearch` | meilisearch:/dumps | dumps |
-| `data/neo4j` | neo4j:/import | fichiers a importer |
+| `data/neo4j` | neo4j:/import | fichiers à importer |
 
-Le dossier `./config` contient la configuration montee en lecture seule : script
-d'initialisation Postgres, fichier de reglages MariaDB, configuration dynamique Traefik.
+Le dossier `./config` contient la configuration montée en lecture seule : script
+d'initialisation Postgres, fichier de réglages MariaDB, configuration dynamique Traefik.
 
 Le script `config/postgres/init/01-extensions.sql` active `vector`, `pg_trgm` et
-`uuid-ossp`. Il ne s'execute qu'au tout premier demarrage, quand le volume est vide.
-Le modifier plus tard n'a aucun effet sans `docker compose down -v`, qui detruit les donnees.
+`uuid-ossp`. Il ne s'exécute qu'au tout premier démarrage, quand le volume est vide.
+Le modifier plus tard n'a aucun effet sans `docker compose down -v`, qui détruit les données.
 
 ## Commandes utiles
 
 ```powershell
-docker compose up -d                 # demarrer
-docker compose stop                  # arreter sans rien perdre
+docker compose up -d                 # démarrer
+docker compose stop                  # arrêter sans rien perdre
 docker compose down                  # supprimer les conteneurs, garder les volumes
 docker compose logs -f neo4j         # suivre les logs d'un service
 docker compose restart traefik       # recharger le proxy
-docker compose ps                    # etat et sante
-docker stats --no-stream             # consommation memoire
+docker compose ps                    # état et santé
+docker stats --no-stream             # consommation mémoire
 ```
 
-Acces aux consoles :
+Accès aux consoles :
 
 ```powershell
 docker compose exec postgres psql -U dev -d devdb
@@ -203,8 +203,8 @@ docker compose exec neo4j cypher-shell -u neo4j -p devpassword
 
 ## Sauvegarde et restauration
 
-Les dumps s'ecrivent dans le conteneur vers `/backups`, qui correspond a `./data/<service>`
-sur l'hote. Ca evite les problemes d'encodage des redirections PowerShell.
+Les dumps s'écrivent dans le conteneur vers `/backups`, qui correspond à `./data/<service>`
+sur l'hôte. Ça évite les problèmes d'encodage des redirections PowerShell.
 
 ```powershell
 docker compose exec postgres sh -c 'pg_dump -U dev devdb > /backups/devdb.sql'
@@ -216,31 +216,31 @@ docker compose exec mariadb sh -c 'mariadb -udev -pdevpass devdb < /backups/devd
 
 ## Notes sur les versions
 
-Les images sont epinglees volontairement. MariaDB 12.3 et Neo4j 5.26 sont les versions
+Les images sont épinglées volontairement. MariaDB 12.3 et Neo4j 5.26 sont les versions
 LTS de leurs branches respectives.
 
-**MinIO merite une mise en garde.** Le depot `minio/minio` a ete supprime de Docker Hub,
-et l'image la plus recente disponible sur Quay.io date du 7 septembre 2025. La console
-web de l'edition communautaire a par ailleurs ete amputee en mai 2025 : il ne reste que
-la creation et la navigation dans les buckets, toute l'administration passe par le client
+**MinIO mérite une mise en garde.** Le dépôt `minio/minio` a été supprimé de Docker Hub,
+et l'image la plus récente disponible sur Quay.io date du 7 septembre 2025. La console
+web de l'édition communautaire a par ailleurs été amputée en mai 2025 : il ne reste que
+la création et la navigation dans les buckets, toute l'administration passe par le client
 `mc`. En pratique, ce conteneur tourne sans correctif depuis plus d'un an. Acceptable
-pour du developpement local non expose ; a remplacer par Garage, SeaweedFS ou RustFS
-si ce point devient genant.
+pour du développement local non exposé ; à remplacer par Garage, SeaweedFS ou RustFS
+si ce point devient gênant.
 
-## Depannage
+## Dépannage
 
-**Le port 80 est deja pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
+**Le port 80 est déjà pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
 `http://minio.test:8000`. Sous Windows, le coupable habituel est IIS ou un service http.sys.
 
-**Une URL `.test` renvoie 404 juste apres le demarrage.** Le service repond mais n'est pas
-encore pret. Neo4j est le plus lent. Verifier avec `docker compose ps` que la sante est verte.
+**Une URL `.test` renvoie 404 juste après le démarrage.** Le service répond mais n'est pas
+encore prêt. Neo4j est le plus lent. Vérifier avec `docker compose ps` que la santé est verte.
 
-**`.test` ne resout pas.** Les entrees du fichier hosts sont manquantes, voir plus haut.
-En attendant, utiliser l'equivalent en `.localhost` dans le navigateur.
+**`.test` ne résout pas.** Les entrées du fichier hosts sont manquantes, voir plus haut.
+En attendant, utiliser l'équivalent en `.localhost` dans le navigateur.
 
-**Le navigateur refuse le certificat.** Normal tant que mkcert n'est pas installe :
-le certificat auto-signe de Traefik n'est reconnu par personne.
+**Le navigateur refuse le certificat.** Normal tant que mkcert n'est pas installé :
+le certificat auto-signé de Traefik n'est reconnu par personne.
 
-**Traefik affiche un avertissement `aliasHeadersStrategy` au demarrage.** Recommandation
-de durcissement de Traefik v3.7 concernant l'usurpation d'en-tetes vers les backends PHP.
-Sans consequence sur une stack locale.
+**Traefik affiche un avertissement `aliasHeadersStrategy` au démarrage.** Recommandation
+de durcissement de Traefik v3.7 concernant l'usurpation d'en-têtes vers les backends PHP.
+Sans conséquence sur une stack locale.
