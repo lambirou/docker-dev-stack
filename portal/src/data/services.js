@@ -1,8 +1,10 @@
 // Source de vérité du portail. Ajouter un service à la stack = ajouter une entrée ici.
 //
 // sonde : URL HTTP sur le port publié de l'hôte, ou null si le service ne parle pas HTTP.
-// identifiants : { label, valeur } pour une donnée publique, { label, variable } pour
-// renvoyer vers le nom de la variable du fichier .env sans jamais exposer sa valeur.
+// identifiants et connexion : gabarits où ${VARIABLE} est remplacé à l'exécution par la
+// valeur lue dans /config.json, c'est-à-dire par la vraie valeur du fichier .env. Une
+// valeur sensible (PASSWORD, KEY, SECRET, TOKEN) s'affiche masquée mais se copie en clair.
+// Sans config.json, le gabarit retombe sur le nom de la variable.
 
 // L'ordre du tableau fixe l'ordre d'affichage des sections dans la grille.
 export const categories = [
@@ -24,11 +26,11 @@ export const services = [
     urlLocalhost: null,
     portDirect: 5432,
     sonde: null,
-    connexion: "postgresql://dev@localhost:5432/devdb",
+    connexion: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}",
     identifiants: [
-      { label: "Utilisateur", valeur: "dev" },
-      { label: "Mot de passe", variable: "POSTGRES_PASSWORD" },
-      { label: "Base", valeur: "devdb" },
+      { label: "Utilisateur", valeur: "${POSTGRES_USER}" },
+      { label: "Mot de passe", valeur: "${POSTGRES_PASSWORD}" },
+      { label: "Base", valeur: "${POSTGRES_DB}" },
     ],
   },
   {
@@ -42,12 +44,12 @@ export const services = [
     urlLocalhost: null,
     portDirect: 3306,
     sonde: null,
-    connexion: "mysql://dev@localhost:3306/devdb",
+    connexion: "mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@localhost:3306/${MARIADB_DATABASE}",
     identifiants: [
-      { label: "Utilisateur", valeur: "dev" },
-      { label: "Mot de passe", variable: "MARIADB_PASSWORD" },
-      { label: "Mot de passe root", variable: "MARIADB_ROOT_PASSWORD" },
-      { label: "Base", valeur: "devdb" },
+      { label: "Utilisateur", valeur: "${MARIADB_USER}" },
+      { label: "Mot de passe", valeur: "${MARIADB_PASSWORD}" },
+      { label: "Mot de passe root", valeur: "${MARIADB_ROOT_PASSWORD}" },
+      { label: "Base", valeur: "${MARIADB_DATABASE}" },
     ],
   },
   {
@@ -62,8 +64,8 @@ export const services = [
     portDirect: 8306,
     sonde: "http://localhost:8306",
     identifiants: [
-      { label: "Utilisateur", valeur: "dev" },
-      { label: "Mot de passe", variable: "MARIADB_PASSWORD" },
+      { label: "Utilisateur", valeur: "${MARIADB_USER}" },
+      { label: "Mot de passe", valeur: "${MARIADB_PASSWORD}" },
     ],
   },
   {
@@ -80,7 +82,7 @@ export const services = [
     sonde: "http://localhost:7474",
     identifiants: [
       { label: "Utilisateur", valeur: "neo4j" },
-      { label: "Mot de passe", variable: "NEO4J_PASSWORD" },
+      { label: "Mot de passe", valeur: "${NEO4J_PASSWORD}" },
     ],
   },
   {
@@ -97,7 +99,7 @@ export const services = [
     sonde: "http://localhost:6333",
     identifiants: [
       { label: "En-tête", valeur: "api-key" },
-      { label: "Clé API", variable: "QDRANT_API_KEY" },
+      { label: "Clé API", valeur: "${QDRANT_API_KEY}" },
     ],
   },
   {
@@ -111,7 +113,7 @@ export const services = [
     urlLocalhost: "https://meilisearch.localhost",
     portDirect: 7700,
     sonde: "http://localhost:7700/health",
-    identifiants: [{ label: "Clé maître", variable: "MEILI_MASTER_KEY" }],
+    identifiants: [{ label: "Clé maître", valeur: "${MEILI_MASTER_KEY}" }],
   },
   {
     id: "redis",
@@ -124,8 +126,8 @@ export const services = [
     urlLocalhost: null,
     portDirect: 6379,
     sonde: null,
-    connexion: "redis://localhost:6379",
-    identifiants: [{ label: "Mot de passe", variable: "REDIS_PASSWORD" }],
+    connexion: "redis://:${REDIS_PASSWORD}@localhost:6379",
+    identifiants: [{ label: "Mot de passe", valeur: "${REDIS_PASSWORD}" }],
   },
   {
     id: "redisinsight",
@@ -140,7 +142,7 @@ export const services = [
     sonde: "http://localhost:5540",
     identifiants: [
       { label: "Hôte", valeur: "redis" },
-      { label: "Mot de passe", variable: "REDIS_PASSWORD" },
+      { label: "Mot de passe", valeur: "${REDIS_PASSWORD}" },
     ],
   },
   {
@@ -156,8 +158,8 @@ export const services = [
     portsAnnexes: [{ label: "API S3", port: 9000 }],
     sonde: "http://localhost:9001",
     identifiants: [
-      { label: "Utilisateur", valeur: "devadmin" },
-      { label: "Mot de passe", variable: "MINIO_ROOT_PASSWORD" },
+      { label: "Utilisateur", valeur: "${MINIO_ROOT_USER}" },
+      { label: "Mot de passe", valeur: "${MINIO_ROOT_PASSWORD}" },
     ],
   },
   {

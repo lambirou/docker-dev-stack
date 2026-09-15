@@ -1,0 +1,3 @@
+# Les scripts d'entrypoint sont exécutés par /bin/sh dans un conteneur Linux :
+# un CRLF laissé par un checkout Windows casserait le shebang.
+*.sh text eol=lf

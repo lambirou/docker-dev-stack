@@ -1,7 +1,7 @@
 import ServiceCard from "./ServiceCard.jsx";
 import { iconesCategorie } from "./Icons.jsx";
 
-export default function ServiceGrid({ categories, services, etats }) {
+export default function ServiceGrid({ categories, services, etats, config, secretsVisibles }) {
   const sections = categories
     .map((categorie) => ({
       categorie,
@@ -36,6 +36,8 @@ export default function ServiceGrid({ categories, services, etats }) {
                   key={service.id}
                   service={service}
                   etat={service.sonde ? (etats[service.id] ?? "verification") : "tcp"}
+                  config={config}
+                  secretsVisibles={secretsVisibles}
                 />
               ))}
             </div>

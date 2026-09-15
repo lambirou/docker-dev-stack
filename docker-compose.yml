@@ -265,6 +265,23 @@ services:
     image: dev-stack-portal:local
     container_name: dev-portal
     ports: ["${PORTAL_PORT:-8080}:80"]
+    # Lues au démarrage pour écrire /config.json : le portail affiche et copie les
+    # vrais identifiants sans qu'aucun d'eux n'entre dans le bundle. Après une
+    # modification du .env : docker compose up -d portal.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     labels:
       traefik.enable: "true"
       traefik.http.routers.portal.rule: Host(`portal.test`) || Host(`portal.localhost`)

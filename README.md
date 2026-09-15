@@ -159,6 +159,31 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.
 
+### Copier les vraies valeurs depuis le portail
+
+Les cartes du portail affichent les identifiants réels, pas le nom des variables. Elles
+lisent `/config.json`, écrit par le conteneur `portal` à chaque démarrage à partir des
+variables que `docker-compose.yml` lui transmet depuis `.env`. Aucun identifiant n'entre
+donc dans le bundle JavaScript.
+
+Le bouton œil de l'en-tête dévoile les valeurs sensibles, masquées par défaut. Le bouton
+de copie, lui, renvoie toujours la valeur réelle, y compris quand elle est masquée à
+l'écran, chaînes de connexion comprises.
+
+Après une modification du `.env`, recréer le conteneur pour que le portail suive :
+
+```powershell
+docker compose up -d portal
+```
+
+Conséquence à connaître : le portail expose les identifiants de la stack à quiconque peut
+l'ouvrir (`localhost:8080`, `portal.test`). C'est le compromis assumé d'un poste de
+développement. Sur une machine partagée, supprimer le bloc `environment` du service
+`portal` fait revenir les cartes aux simples noms de variables.
+
+En développement (`npm run dev` dans `portal/`), Vite sert le même `/config.json` en
+relisant le `.env` de la racine à chaque requête.
+
 ## Où vivent les données
 
 Les données des bases sont dans des **volumes Docker nommés**, pas dans `./data`.

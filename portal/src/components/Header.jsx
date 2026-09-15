@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { IconeLune, IconeRafraichir, IconeSoleil } from "./Icons.jsx";
+import { IconeLune, IconeOeil, IconeOeilBarre, IconeRafraichir, IconeSoleil } from "./Icons.jsx";
 
 const bouton =
   "inline-flex size-9 items-center justify-center rounded-lg border border-bord bg-surface/70 text-attenue transition hover:border-bord-vif hover:text-texte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -19,6 +19,9 @@ export default function Header({
   onRafraichir,
   theme,
   onBasculerTheme,
+  secretsVisibles,
+  onBasculerSecrets,
+  configDisponible,
 }) {
   const champ = useRef(null);
 
@@ -62,6 +65,23 @@ export default function Header({
             aria-label="Relancer les sondes"
           >
             <IconeRafraichir className={enCours ? "animate-spin" : undefined} />
+          </button>
+          <button
+            type="button"
+            onClick={onBasculerSecrets}
+            disabled={!configDisponible}
+            aria-pressed={secretsVisibles}
+            className={bouton + " disabled:cursor-not-allowed disabled:opacity-40"}
+            title={
+              configDisponible
+                ? secretsVisibles
+                  ? "Masquer les identifiants"
+                  : "Afficher les identifiants"
+                : "Identifiants indisponibles : config.json n'a pas été chargé"
+            }
+            aria-label={secretsVisibles ? "Masquer les identifiants" : "Afficher les identifiants"}
+          >
+            {secretsVisibles ? <IconeOeilBarre /> : <IconeOeil />}
           </button>
           <button
             type="button"

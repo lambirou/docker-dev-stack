@@ -86,8 +86,8 @@ Chaque service est un objet de `src/data/services.js` :
   sonde: "http://localhost:9001",   // null si le service ne parle pas HTTP
   motsCles: ["s3", "objet", "bucket", "upload", "aws", "blob"],
   identifiants: [
-    { label: "Utilisateur", valeur: "devadmin" },
-    { label: "Mot de passe", variable: "MINIO_ROOT_PASSWORD" }
+    { label: "Utilisateur", valeur: "${MINIO_ROOT_USER}" },
+    { label: "Mot de passe", valeur: "${MINIO_ROOT_PASSWORD}" }
   ]
 }
 ```
@@ -156,12 +156,21 @@ Page unique, thème sombre par défaut, bascule vers le thème clair persistée 
 
 ## Identifiants
 
-Le bloc identifiants affiche l'utilisateur et le **nom de la variable** `.env`
-(`POSTGRES_PASSWORD`), jamais sa valeur. Un build statique figerait les mots de passe
-dans l'image Docker et dans le bundle JavaScript servi à tout le réseau local.
+Le bloc identifiants affiche les **valeurs réelles** du fichier `.env`, mais elles ne
+sont jamais figées dans le build : un bundle statique embarquerait les mots de passe
+dans l'image Docker. Le conteneur nginx écrit `/config.json` à chaque démarrage à partir
+des variables que `docker-compose.yml` lui transmet, et le portail le lit à l'exécution.
+Les chaînes de `services.js` sont donc des gabarits — `${POSTGRES_PASSWORD}` — résolus
+dans le navigateur. Sans `config.json`, chaque jeton retombe sur le nom de sa variable :
+l'interface reste lisible et désigne la ligne du `.env` à renseigner.
 
-Le bouton de copie copie la valeur affichée : nom d'utilisateur, nom de variable ou
-chaîne de connexion.
+Une variable dont le nom contient `PASSWORD`, `KEY`, `SECRET` ou `TOKEN` s'affiche
+masquée ; le bouton œil de l'en-tête les dévoile toutes d'un coup. Le bouton de copie
+renvoie toujours la valeur réelle, masquée ou non, chaînes de connexion comprises.
+
+Le compromis est assumé : le portail sert les identifiants de la stack à qui peut
+l'ouvrir sur le réseau local. Retirer le bloc `environment` du service `portal` ramène
+l'affichage aux seuls noms de variables.
 
 ## Conteneurisation
 
@@ -170,6 +179,11 @@ chaîne de connexion.
 1. `node:22-alpine` — `npm ci` puis `npm run build`.
 2. `nginx:1.29-alpine` — copie de `dist/` vers `/usr/share/nginx/html`, configuration
    personnalisée, exposition du port 80.
+
+`docker-entrypoint.d/40-portal-config.sh` est exécuté par l'entrypoint nginx avant le
+démarrage du serveur : il sérialise en JSON les variables d'environnement filtrées par
+préfixe de service. Le serveur de développement Vite rend le même service en relisant le
+`.env` de la racine, via un middleware déclaré dans `vite.config.js`.
 
 `nginx.conf` : `try_files` avec repli sur `index.html`, gzip actif, `Cache-Control:
 immutable` sur `/assets/` et `no-cache` sur `index.html`.
