@@ -38,7 +38,7 @@ function Get-RepoRoot {
 }
 
 function Get-StackHostnames {
-    return @('traefik', 'minio', 'mail', 'redis', 'qdrant', 'meilisearch', 'neo4j', 'phpmyadmin', 'tools')
+    return @('portal', 'traefik', 'minio', 'mail', 'redis', 'qdrant', 'meilisearch', 'neo4j', 'phpmyadmin', 'tools')
 }
 
 function Get-DotEnv {

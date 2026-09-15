@@ -7,6 +7,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 
 | Service | Image | Rôle | URL | Port direct |
 | --- | --- | --- | --- | --- |
+| portal | build local (`nginx:1.29-alpine`) | Portail d'accès à la stack | https://portal.test | 8080 |
 | postgres | `pgvector/pgvector:pg17` | Relationnel + vecteurs | - | 5432 |
 | mariadb | `mariadb:12.3` | Relationnel | - | 3306 |
 | phpmyadmin | `phpmyadmin:5` | UI MariaDB | https://phpmyadmin.test | 8306 |
@@ -89,7 +90,7 @@ dans un **PowerShell administrateur** :
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools"
+$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools"
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 

@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Palette sémantique. Le thème sombre est la valeur par défaut ; le thème clair
+   redéfinit les mêmes variables sous .clair, donc aucun composant n'a besoin de
+   variante de thème dans ses classes. */
+@theme {
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
+    sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", ui-monospace, "SFMono-Regular",
+    monospace;
+
+  --color-fond: #070b14;
+  --color-surface: #0e1524;
+  --color-relief: #162033;
+  --color-bord: #1e2b44;
+  --color-bord-vif: #2f4260;
+  --color-texte: #e8eef9;
+  --color-attenue: #8b9cb9;
+  --color-accent: #38bdf8;
+  --color-ok: #34d399;
+  --color-ko: #f87171;
+  --color-neutre: #64748b;
+  --color-attente: #fbbf24;
+}
+
+.clair {
+  --color-fond: #f2f5fa;
+  --color-surface: #ffffff;
+  --color-relief: #eef2f9;
+  --color-bord: #dde4ef;
+  --color-bord-vif: #c3cedf;
+  --color-texte: #16233a;
+  --color-attenue: #5a6b86;
+  --color-accent: #0284c7;
+  --color-ok: #059669;
+  --color-ko: #dc2626;
+  --color-neutre: #94a3b8;
+  --color-attente: #d97706;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html.clair {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-fond);
+  background-image: radial-gradient(
+      60rem 40rem at 12% -10%,
+      color-mix(in oklab, var(--color-accent) 14%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      50rem 30rem at 95% 0%,
+      color-mix(in oklab, #a78bfa 12%, transparent),
+      transparent
+    );
+  background-attachment: fixed;
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

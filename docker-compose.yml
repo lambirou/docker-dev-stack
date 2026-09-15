@@ -259,6 +259,21 @@ services:
       traefik.http.routers.redisinsight-tls.tls: "true"
       traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
 
+  portal:
+    <<: *common
+    build: ./portal
+    image: dev-stack-portal:local
+    container_name: dev-portal
+    ports: ["${PORTAL_PORT:-8080}:80"]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.portal.rule: Host(`portal.test`) || Host(`portal.localhost`)
+      traefik.http.routers.portal.entrypoints: web
+      traefik.http.routers.portal-tls.rule: Host(`portal.test`) || Host(`portal.localhost`)
+      traefik.http.routers.portal-tls.entrypoints: websecure
+      traefik.http.routers.portal-tls.tls: "true"
+      traefik.http.services.portal.loadbalancer.server.port: "80"
+
   it-tools:
     <<: *common
     image: corentinth/it-tools:2024.10.22-7ca5933

@@ -52,6 +52,7 @@ portal/
     App.jsx
     index.css             # @import "tailwindcss" + bloc @theme
     data/services.js      # source de vérité : la liste des services
+    data/recherche.js     # index Fuse.js et fonction de recherche
     hooks/useHealth.js    # sonde périodique
     hooks/useTheme.js     # bascule sombre/clair, persistée
     components/
@@ -63,7 +64,8 @@ portal/
 ```
 
 Stack : Vite 7, React 19, Tailwind CSS v4 (configuration CSS-first via `@theme`, sans
-`tailwind.config.js`). JavaScript et non TypeScript : le reste du dépôt n'en utilise pas.
+`tailwind.config.js`) et Fuse.js pour la recherche. JavaScript et non TypeScript : le
+reste du dépôt n'en utilise pas.
 
 ## Modèle de données
 
@@ -82,6 +84,7 @@ Chaque service est un objet de `src/data/services.js` :
     { label: "API S3", port: 9000 }
   ],
   sonde: "http://localhost:9001",   // null si le service ne parle pas HTTP
+  motsCles: ["s3", "objet", "bucket", "upload", "aws", "blob"],
   identifiants: [
     { label: "Utilisateur", valeur: "devadmin" },
     { label: "Mot de passe", variable: "MINIO_ROOT_PASSWORD" }
@@ -91,16 +94,22 @@ Chaque service est un objet de `src/data/services.js` :
 
 Ajouter un service à la stack se résume à ajouter une entrée dans ce fichier.
 
+Le champ `motsCles` rassemble synonymes, sigles et cas d'usage. Il existe pour que la
+recherche réponde à un besoin — `s3`, `jwt`, `smtp`, `cache`, `graphe` — et pas
+seulement à un nom de produit que l'utilisateur doit déjà connaître.
+
 ### Services couverts
 
-Les onze services existants plus le portail lui-même, répartis en quatre catégories :
+Les douze services de la stack, portail compris, répartis en quatre catégories :
+
+L'ordre du tableau `categories` fixe l'ordre des sections : l'outillage vient en tête.
 
 | Catégorie | Services |
 | --- | --- |
+| Outillage | traefik, mailpit, it-tools, portal |
 | Données | postgres, mariadb, phpmyadmin, neo4j |
 | Recherche et vecteurs | qdrant, meilisearch |
 | Cache et stockage | redis, redisinsight, minio |
-| Outillage | traefik, mailpit, portal |
 
 Les services sans interface web (postgres, mariadb, redis) apparaissent comme cartes
 informatives : pas de lien principal, pas de sonde, une pastille neutre marquée `TCP`
@@ -137,8 +146,13 @@ Page unique, thème sombre par défaut, bascule vers le thème clair persistée 
 - **Carte** : nom, rôle, pastille d'état, lien principal `.test`, lien secondaire
   `.localhost`, port direct cliquable, ports annexes en texte, et bloc identifiants
   repliable.
-- **Recherche** : filtre instantané sur le nom, le rôle et la catégorie ; les sections
-  vides disparaissent.
+- **Recherche** : recherche floue Fuse.js sur le nom (poids 4), l'identifiant (3), les
+  mots-clés (2), le rôle (2) et le libellé de la catégorie (1). Seuil de 0,25, position
+  et diacritiques ignorés : `qdrnt` trouve Qdrant, `donnees` la section Données, `s3`
+  MinIO et `jwt` IT Tools. Le seuil est serré parce que les mots-clés élargissent le
+  corpus indexé : à 0,35, un terme court comme `rag` remontait toute la stack. Les
+  sections vides disparaissent. Le regroupement par catégorie est conservé pendant la
+  recherche, donc le classement Fuse ne joue qu'à l'intérieur de chaque section.
 
 ## Identifiants
 
