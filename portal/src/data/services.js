@@ -235,6 +235,22 @@ export const services = [
     ],
   },
   {
+    id: "tinyauth",
+    nom: "Tinyauth",
+    role: "Page de connexion et fournisseur OIDC. Protège les hôtes en *.auth.test",
+    motsCles: ["authentification", "auth", "connexion", "login", "sso", "oidc", "openid", "oauth", "forward auth", "forwardauth", "middleware", "session", "protéger", "identité", "ldap", "totp", "2fa", "mot de passe"],
+    categorie: "outillage",
+    image: "ghcr.io/tinyauthapp/tinyauth:v5.2.0",
+    urlTest: "https://auth.test",
+    urlLocalhost: "https://auth.localhost",
+    portDirect: 8084,
+    sonde: "http://localhost:8084/api/healthz",
+    identifiants: [
+      { label: "Utilisateur", valeur: "${TINYAUTH_USER}" },
+      { label: "Mot de passe", valeur: "${TINYAUTH_PASSWORD}" },
+    ],
+  },
+  {
     id: "portal",
     nom: "Portail",
     role: "Cette page. Servie par nginx depuis un build Vite",

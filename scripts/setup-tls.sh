@@ -81,7 +81,9 @@ mkcert -install
 mkdir -p "$DOSSIER_CERTS"
 (
   cd "$DOSSIER_CERTS"
-  mkcert -cert-file local.pem -key-file local-key.pem '*.test' '*.localhost' localhost 127.0.0.1 ::1
+  # Les jokers ne couvrent qu'un seul niveau : *.auth.test est indispensable aux
+  # services placés derrière la page de connexion tinyauth.
+  mkcert -cert-file local.pem -key-file local-key.pem '*.test' '*.localhost' '*.auth.test' '*.auth.localhost' localhost 127.0.0.1 ::1
 )
 ok "certificat écrit dans $DOSSIER_CERTS"
 

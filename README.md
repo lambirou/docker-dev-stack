@@ -23,6 +23,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.test | 8081 |
 | dockhand | `fnsys/dockhand:v1.0.48` | Gestion des conteneurs Docker | https://containers.test | 8082 |
 | traefik-manager | `ghcr.io/chr0nzz/traefik-manager:1.13.5` | UI de configuration de Traefik (routes, middlewares) | https://proxy.test | 8083 |
+| tinyauth | `ghcr.io/tinyauthapp/tinyauth:v5.2.0` | Page de connexion et fournisseur OIDC devant les services | https://auth.test | 8084 |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
 
 Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
@@ -47,7 +48,7 @@ chmod +x scripts/*.sh          # une seule fois, si le bit exécutable manque
 
 Le script installe Docker s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 40 points de contrôle.
+certificats HTTPS, puis vérifie les 43 points de contrôle.
 
 Sans droits élevés, la version réduite fonctionne aussi — `.\scripts\install.ps1`
 ou `./scripts/install.sh`. Les deux options qui touchent la machine sont alors
@@ -132,14 +133,14 @@ sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les U
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy"
+$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy","auth"
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
 ```
 
 Et sous macOS ou Linux :
 
 ```bash
-for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy; do
+for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy auth; do
   echo "127.0.0.1 $n.test" | sudo tee -a /etc/hosts >/dev/null
 done
 ```
@@ -183,7 +184,7 @@ gestionnaire de paquets sous Linux — avec repli sur le binaire officiel dans
 winget install FiloSottile.mkcert
 mkcert -install
 cd config\traefik\certs
-mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" localhost 127.0.0.1 ::1
+mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" "*.auth.test" "*.auth.localhost" localhost 127.0.0.1 ::1
 cd ..\..\..
 Copy-Item config\traefik\dynamic\tls.yml.example config\traefik\dynamic\tls.yml
 docker compose restart traefik
@@ -196,7 +197,7 @@ brew install mkcert nss                      # macOS
 sudo apt install mkcert libnss3-tools        # Debian, Ubuntu
 mkcert -install
 cd config/traefik/certs
-mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" localhost 127.0.0.1 ::1
+mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" "*.auth.test" "*.auth.localhost" localhost 127.0.0.1 ::1
 chmod 0644 local.pem local-key.pem           # Traefik lit la clé en non-root
 cd ../../..
 cp config/traefik/dynamic/tls.yml.example config/traefik/dynamic/tls.yml
@@ -220,6 +221,65 @@ Pour forcer la redirection HTTP vers HTTPS, ajouter au bloc `command` de traefik
 - --entrypoints.web.http.redirections.entrypoint.scheme=https
 ```
 
+## Authentification
+
+Tinyauth sert une page de connexion sur https://auth.test et joue aussi le rôle de
+fournisseur OIDC, de client OAuth (GitHub, Google, provider générique) et de pont LDAP.
+Le compte local livré est `dev` / `devauthpass`.
+
+**Aucun service de la stack n'est protégé par défaut.** Traefik expose un middleware
+`tinyauth@docker` prêt à l'emploi ; tant qu'aucun routeur ne le référence, rien ne change.
+
+Sans les entrées `.test` dans le fichier hosts, mettre `TINYAUTH_APP_URL=https://auth.localhost`
+dans le `.env` : c'est la seule URL de la stack qui doit être absolue, puisque tinyauth
+y renvoie le navigateur après connexion. Tout ce qui suit se transpose alors en
+`.localhost`, que le navigateur résout sans fichier hosts.
+
+### Mettre un service derrière la page de connexion
+
+Le cookie de session est posé sur le domaine de `TINYAUTH_APP_URL`, soit `auth.test`.
+Un navigateur n'envoie ce cookie qu'à `auth.test` et à ses sous-domaines : `tools.test`
+et `auth.test` sont voisins, pas parents, et tinyauth refuse d'ailleurs explicitement
+de traiter un hôte hors de son domaine (`domain does not match cookie domain`).
+
+Un service protégé reçoit donc un **second hôte** en `*.auth.test`, à côté de son hôte
+habituel. Exemple avec phpMyAdmin, à ajouter à ses `labels` dans `docker-compose.yml` :
+
+```yaml
+      traefik.http.routers.phpmyadmin-auth.rule: Host(`phpmyadmin.auth.test`)
+      traefik.http.routers.phpmyadmin-auth.entrypoints: websecure
+      traefik.http.routers.phpmyadmin-auth.tls: "true"
+      traefik.http.routers.phpmyadmin-auth.middlewares: tinyauth@docker
+      traefik.http.routers.phpmyadmin-auth.service: phpmyadmin
+```
+
+Puis `docker compose up -d phpmyadmin`, une ligne `127.0.0.1 phpmyadmin.auth.test` dans
+le fichier hosts, et https://phpmyadmin.auth.test passe par la page de connexion. Le
+certificat mkcert couvre déjà `*.auth.test` depuis `setup-tls` ; sur un certificat plus
+ancien, relancer le script.
+
+Une fois connecté, l'application reçoit les en-têtes `Remote-User`, `Remote-Name`,
+`Remote-Email` et `Remote-Groups` : de quoi brancher l'authentification transparente
+des applications qui savent les lire.
+
+À garder en tête : seul le routeur en `.auth.test` est protégé. L'hôte d'origine
+(`phpmyadmin.test`) et le port direct (`localhost:8306`) restent ouverts — c'est
+voulu sur un poste de développement, où l'on veut pouvoir court-circuiter la connexion.
+Pour fermer ces accès, supprimer le routeur d'origine et la publication du port.
+
+### Changer le compte
+
+Tinyauth ne lit que `TINYAUTH_AUTH_USERS`, au format `utilisateur:hash bcrypt` :
+
+```bash
+docker compose run --rm tinyauth user create --interactive
+```
+
+Répondre **oui** à « Format the output for Docker? » : les `$` du hash sont alors doublés,
+ce qu'attend le `.env`. Reporter la ligne obtenue, aligner `TINYAUTH_USER` et
+`TINYAUTH_PASSWORD` — qui ne servent qu'à l'affichage dans le portail — puis
+`docker compose up -d tinyauth portal`.
+
 ## Identifiants
 
 Tous définis dans `.env`, valeurs de développement uniquement.
@@ -234,6 +294,7 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 | Qdrant | clé API | `devkey` (en-tête `api-key`) |
 | Meilisearch | clé maître | `devmasterkey_min16chars` |
 | Traefik Manager | - | `devproxypass` (mot de passe seul, pas de nom d'utilisateur) |
+| Tinyauth | `dev` | `devauthpass` |
 
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.

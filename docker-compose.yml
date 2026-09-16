@@ -285,6 +285,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       TRAEFIK_MANAGER_ADMIN_PASSWORD: ${TRAEFIK_MANAGER_ADMIN_PASSWORD}
+      TINYAUTH_USER: ${TINYAUTH_USER}
+      TINYAUTH_PASSWORD: ${TINYAUTH_PASSWORD}
     labels:
       traefik.enable: "true"
       traefik.http.routers.portal.rule: Host(`portal.test`) || Host(`portal.localhost`)
@@ -372,6 +374,40 @@ services:
       traefik.http.routers.traefik-manager-tls.tls: "true"
       traefik.http.services.traefik-manager.loadbalancer.server.port: "5000"
 
+  tinyauth:
+    <<: *common
+    image: ghcr.io/tinyauthapp/tinyauth:v5.2.0
+    container_name: dev-tinyauth
+    environment:
+      TZ: ${TZ:-Africa/Abidjan}
+      # URL publique de la page de connexion. Elle fixe aussi le domaine du cookie
+      # de session : avec auth.test, seuls auth.test et ses sous-domaines peuvent
+      # etre proteges par le middleware. Voir la section Tinyauth du README.
+      TINYAUTH_APPURL: ${TINYAUTH_APP_URL:-https://auth.test}
+      # Couple utilisateur:hash bcrypt, le seul que tinyauth verifie reellement.
+      TINYAUTH_AUTH_USERS: ${TINYAUTH_AUTH_USERS}
+      # La stack repond aussi en HTTP simple sur localhost : un cookie Secure ne
+      # serait jamais renvoye par le navigateur sur http://auth.localhost.
+      TINYAUTH_AUTH_SECURECOOKIE: "false"
+      # Pas d'appel sortant pour verifier les nouvelles versions.
+      TINYAUTH_ANALYTICS_ENABLED: "false"
+    ports: ["${TINYAUTH_PORT:-8084}:3000"]
+    volumes:
+      - tinyauth-data:/data
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.tinyauth.rule: Host(`auth.test`) || Host(`auth.localhost`)
+      traefik.http.routers.tinyauth.entrypoints: web
+      traefik.http.routers.tinyauth-tls.rule: Host(`auth.test`) || Host(`auth.localhost`)
+      traefik.http.routers.tinyauth-tls.entrypoints: websecure
+      traefik.http.routers.tinyauth-tls.tls: "true"
+      traefik.http.services.tinyauth.loadbalancer.server.port: "3000"
+      # Middleware pret a l'emploi, applique a aucun service par defaut : ajouter
+      # « traefik.http.routers.<routeur>.middlewares: tinyauth@docker » met le
+      # routeur vise derriere la page de connexion.
+      traefik.http.middlewares.tinyauth.forwardauth.address: http://tinyauth:3000/api/auth/traefik
+      traefik.http.middlewares.tinyauth.forwardauth.authResponseHeaders: Remote-User,Remote-Name,Remote-Email,Remote-Groups
+
 networks:
   devnet:
     driver: bridge
@@ -389,3 +425,4 @@ volumes:
   redisinsight-data:
   dockhand-data:
   traefik-manager-data:
+  tinyauth-data:

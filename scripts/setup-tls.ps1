@@ -56,7 +56,9 @@ New-Item -ItemType Directory -Force -Path $certDir | Out-Null
 
 Push-Location $certDir
 try {
-    mkcert -cert-file local.pem -key-file local-key.pem '*.test' '*.localhost' 'localhost' '127.0.0.1' '::1'
+    # Les jokers ne couvrent qu'un seul niveau : *.auth.test est indispensable aux
+    # services places derriere la page de connexion tinyauth.
+    mkcert -cert-file local.pem -key-file local-key.pem '*.test' '*.localhost' '*.auth.test' '*.auth.localhost' 'localhost' '127.0.0.1' '::1'
     $generated = ($LASTEXITCODE -eq 0)
 } finally {
     Pop-Location
