@@ -128,7 +128,14 @@ attendre() {
 }
 
 noms_stack() {
-  printf '%s\n' portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy auth
+  # Noms complets. Le niveau dev.test n'est pas décoratif : le cookie de session de
+  # tinyauth est posé sur ce domaine parent, ce qui permet à une seule page de
+  # connexion de couvrir n'importe quel service de la stack. Le portail occupe l'apex
+  # dev.test : tinyauth accepte l'hôte qui est exactement le domaine du cookie, la
+  # porte d'entrée de la stack est donc protégée comme les autres.
+  printf '%s\n' dev.test auth.dev.test traefik.dev.test minio.dev.test mail.dev.test \
+    redis.dev.test qdrant.dev.test meilisearch.dev.test neo4j.dev.test phpmyadmin.dev.test \
+    tools.dev.test containers.dev.test proxy.dev.test
 }
 
 vider_cache_dns() {

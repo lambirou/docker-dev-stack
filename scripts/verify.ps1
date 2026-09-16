@@ -13,6 +13,11 @@ $root = Get-RepoRoot
 $cfg = Get-DotEnv (Join-Path $root '.env')
 $results = @()
 
+# Tinyauth ne redirige vers sa page de connexion que les clients qu'il identifie
+# comme des navigateurs ; aux autres il repond 401. Sans cet en-tete, le controle
+# du routage signalerait en echec les hotes proteges, qui fonctionnent pourtant.
+$navigateur = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+
 function Add-Result {
     param([string]$Name, [bool]$Success, [string]$Detail)
     $script:results += [pscustomobject]@{
@@ -25,9 +30,9 @@ function Add-Result {
 function Get-HttpCode {
     param([string]$Url, [string]$HostHeader)
     if ($HostHeader) {
-        return (curl.exe -s -o NUL -w '%{http_code}' -H ('Host: ' + $HostHeader) $Url)
+        return (curl.exe -s -o NUL -w '%{http_code}' -A $script:navigateur -H ('Host: ' + $HostHeader) $Url)
     }
-    return (curl.exe -s -o NUL -w '%{http_code}' $Url)
+    return (curl.exe -s -o NUL -w '%{http_code}' -A $script:navigateur $Url)
 }
 
 Push-Location $root
@@ -63,11 +68,9 @@ try {
         @{ Name = 'minio'; Url = 'http://localhost:' + $cfg['MINIO_API_PORT'] + '/minio/health/live' },
         @{ Name = 'mailpit'; Url = 'http://localhost:' + $cfg['MAILPIT_UI_PORT'] + '/api/v1/info' },
         @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' },
-        @{ Name = 'portal'; Url = 'http://localhost:' + $cfg['PORTAL_PORT'] + '/' },
         @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' },
         @{ Name = 'dockhand'; Url = 'http://localhost:' + $cfg['DOCKHAND_PORT'] + '/' },
-        @{ Name = 'traefik-manager'; Url = 'http://localhost:' + $cfg['TRAEFIK_MANAGER_PORT'] + '/login' },
-        @{ Name = 'tinyauth'; Url = 'http://localhost:' + $cfg['TINYAUTH_PORT'] + '/api/healthz' }
+        @{ Name = 'traefik-manager'; Url = 'http://localhost:' + $cfg['TRAEFIK_MANAGER_PORT'] + '/login' }
     )
     foreach ($ep in $endpoints) {
         $code = Get-HttpCode -Url $ep.Url
@@ -77,9 +80,9 @@ try {
     Write-Step 'Routage Traefik'
 
     foreach ($name in Get-StackHostnames) {
-        $fqdn = $name + '.test'
+        $fqdn = $name
         $http = Get-HttpCode -Url 'http://127.0.0.1/' -HostHeader $fqdn
-        $https = curl.exe -sk -o NUL -w '%{http_code}' --resolve ($fqdn + ':443:127.0.0.1') ('https://' + $fqdn + '/')
+        $https = curl.exe -sk -o NUL -w '%{http_code}' -A $navigateur --resolve ($fqdn + ':443:127.0.0.1') ('https://' + $fqdn + '/')
         $ok = ($http -match '^(200|302)$') -and ($https -match '^(200|302)$')
         Add-Result -Name $fqdn -Success $ok -Detail ('http ' + $http + ' / https ' + $https)
     }
@@ -96,4 +99,3 @@ if ($failed.Count -gt 0) {
     exit 1
 }
 Write-Ok ([string]$results.Count + ' controles passes')
-

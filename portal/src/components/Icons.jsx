@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  LogOut,
   Moon,
   RefreshCw,
   Search,
@@ -40,6 +41,7 @@ export const IconeSoleil = (props) => <Sun {...commun} {...props} />;
 export const IconeLune = (props) => <Moon {...commun} {...props} />;
 export const IconeOeil = (props) => <Eye {...commun} {...props} />;
 export const IconeOeilBarre = (props) => <EyeOff {...commun} {...props} />;
+export const IconeDeconnexion = (props) => <LogOut {...commun} {...props} />;
 
 // Clés utilisées par le champ `icone` des catégories dans data/services.js.
 export const iconesCategorie = {

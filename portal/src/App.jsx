@@ -34,6 +34,7 @@ export default function App() {
         secretsVisibles={secretsVisibles}
         onBasculerSecrets={() => setSecretsVisibles((visible) => !visible)}
         configDisponible={etatConfig === "pret"}
+        urlDeconnexion={config?.TINYAUTH_APP_URL}
       />
 
       <main>

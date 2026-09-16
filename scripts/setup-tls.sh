@@ -81,9 +81,10 @@ mkcert -install
 mkdir -p "$DOSSIER_CERTS"
 (
   cd "$DOSSIER_CERTS"
-  # Les jokers ne couvrent qu'un seul niveau : *.auth.test est indispensable aux
-  # services placés derrière la page de connexion tinyauth.
-  mkcert -cert-file local.pem -key-file local-key.pem '*.test' '*.localhost' '*.auth.test' '*.auth.localhost' localhost 127.0.0.1 ::1
+  # Les jokers ne couvrent qu'un seul niveau : toute la stack vit sous dev.test,
+  # c'est donc *.dev.test qu'il faut, pas *.test. Et comme un joker ne couvre pas le
+  # domaine nu, dev.test est listé à part : c'est l'adresse du portail.
+  mkcert -cert-file local.pem -key-file local-key.pem 'dev.test' '*.dev.test' 'dev.localhost' '*.dev.localhost' localhost 127.0.0.1 ::1
 )
 ok "certificat écrit dans $DOSSIER_CERTS"
 

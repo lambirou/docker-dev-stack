@@ -32,11 +32,11 @@ if ($Remove) {
     return
 }
 
-$entries = @(Get-StackHostnames | ForEach-Object { '127.0.0.1 ' + $_ + '.test ' + $marker })
+$entries = @(Get-StackHostnames | ForEach-Object { '127.0.0.1 ' + $_ + ' ' + $marker })
 Set-Content -LiteralPath $hostsFile -Value ($kept + $entries) -Encoding ASCII
 ipconfig /flushdns | Out-Null
 
 Write-Ok ([string]$entries.Count + ' entrees ecrites dans ' + $hostsFile)
 foreach ($name in Get-StackHostnames) {
-    Write-Host ('           https://' + $name + '.test')
+    Write-Host ('           https://' + $name)
 }

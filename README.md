@@ -9,24 +9,26 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 
 | Service | Image | Rôle | URL | Port direct |
 | --- | --- | --- | --- | --- |
-| portal | build local (`nginx:1.29-alpine`) | Portail d'accès à la stack | https://portal.test | 8080 |
+| portal | build local (`nginx:1.29-alpine`) | Portail d'accès à la stack, derrière une page de connexion | https://dev.test | aucun |
 | postgres | `pgvector/pgvector:pg17` | Relationnel + vecteurs | - | 5432 |
 | mariadb | `mariadb:12.3` | Relationnel | - | 3306 |
-| phpmyadmin | `phpmyadmin:5` | UI MariaDB | https://phpmyadmin.test | 8306 |
-| qdrant | `qdrant/qdrant:v1.19.0` | Base vectorielle | https://qdrant.test | 6333, gRPC 6334 |
-| meilisearch | `getmeili/meilisearch:v1` | Recherche plein texte | https://meilisearch.test | 7700 |
-| neo4j | `neo4j:5.26-community` | Base graphe | https://neo4j.test | 7474, bolt 7687 |
+| phpmyadmin | `phpmyadmin:5` | UI MariaDB | https://phpmyadmin.dev.test | 8306 |
+| qdrant | `qdrant/qdrant:v1.19.0` | Base vectorielle | https://qdrant.dev.test | 6333, gRPC 6334 |
+| meilisearch | `getmeili/meilisearch:v1` | Recherche plein texte | https://meilisearch.dev.test | 7700 |
+| neo4j | `neo4j:5.26-community` | Base graphe | https://neo4j.dev.test | 7474, bolt 7687 |
 | redis | `redis:8-alpine` | Cache / files | - | 6379 |
-| redisinsight | `redis/redisinsight:latest` | UI Redis | https://redis.test | 5540 |
-| minio | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` | Stockage objet S3 | https://minio.test | API 9000, console 9001 |
-| mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.test | UI 8025, SMTP 1025 |
-| it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.test | 8081 |
-| dockhand | `fnsys/dockhand:v1.0.48` | Gestion des conteneurs Docker | https://containers.test | 8082 |
-| traefik-manager | `ghcr.io/chr0nzz/traefik-manager:1.13.5` | UI de configuration de Traefik (routes, middlewares) | https://proxy.test | 8083 |
-| tinyauth | `ghcr.io/tinyauthapp/tinyauth:v5.2.0` | Page de connexion et fournisseur OIDC devant les services | https://auth.test | 8084 |
-| traefik | `traefik:v3.7` | Reverse proxy | https://traefik.test | 80, 443, API 8090 |
+| redisinsight | `redis/redisinsight:latest` | UI Redis | https://redis.dev.test | 5540 |
+| minio | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` | Stockage objet S3 | https://minio.dev.test | API 9000, console 9001 |
+| mailpit | `axllent/mailpit:v1.31.1` | Capture des mails | https://mail.dev.test | UI 8025, SMTP 1025 |
+| it-tools | `corentinth/it-tools:2024.10.22-7ca5933` | Boîte à outils dev (encodage, JSON, crypto, réseau) | https://tools.dev.test | 8081 |
+| dockhand | `fnsys/dockhand:v1.0.48` | Gestion des conteneurs Docker | https://containers.dev.test | 8082 |
+| traefik-manager | `ghcr.io/chr0nzz/traefik-manager:1.13.5` | UI de configuration de Traefik (routes, middlewares) | https://proxy.dev.test | 8083 |
+| tinyauth | `ghcr.io/tinyauthapp/tinyauth:v5.2.0` | Page de connexion partagée, middleware d'authentification de la stack | https://auth.dev.test | aucun |
+| traefik | `traefik:v3.7` | Reverse proxy | https://traefik.dev.test | 80, 443, API 8090 |
 
-Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un passage obligé.
+Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un
+passage obligé. Seules exceptions, le portail et tinyauth : ni l'un ni l'autre ne publie
+de port, le passage par Traefik — et donc par la page de connexion — est obligatoire.
 
 ## Installation
 
@@ -48,7 +50,7 @@ chmod +x scripts/*.sh          # une seule fois, si le bit exécutable manque
 
 Le script installe Docker s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 43 points de contrôle.
+certificats HTTPS, puis vérifie les 41 points de contrôle.
 
 Sans droits élevés, la version réduite fonctionne aussi — `.\scripts\install.ps1`
 ou `./scripts/install.sh`. Les deux options qui touchent la machine sont alors
@@ -115,11 +117,19 @@ et Docker Engine l'exposent sur `/var/run/docker.sock`, mais pas Colima
 contexte Docker courant et renseigne `DOCKER_SOCKET` dans le `.env` ; en
 installation manuelle, il suffit de remplir cette variable soi-même.
 
-## Noms de domaine en .test
+## Noms de domaine en .dev.test
+
+Tous les services vivent sous un domaine parent commun, `dev.test`. Ce niveau
+supplémentaire n'est pas cosmétique : le cookie de session de tinyauth est posé
+dessus, ce qui permet à une seule page de connexion de couvrir n'importe quel service
+de la stack — voir la section Authentification.
+
+Le portail, lui, occupe le domaine nu : `https://dev.test`. C'est la porte d'entrée de
+la stack, et tinyauth accepte l'hôte qui est exactement le domaine de son cookie.
 
 Aucun système ne résout `.test` au niveau DNS. Les navigateurs mappent `*.localhost`
 sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les URL
-`.test` partout, y compris depuis `curl` et le code applicatif :
+`.dev.test` partout, y compris depuis `curl` et le code applicatif :
 
 ```powershell
 .\scripts\setup-hosts.ps1          # Windows, PowerShell administrateur
@@ -133,15 +143,17 @@ sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les U
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "portal","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy","auth"
-Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).test" })
+$names = "auth","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy"
+Add-Content $hostsFile "127.0.0.1 dev.test"        # le portail, sur le domaine nu
+Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).dev.test" })
 ```
 
 Et sous macOS ou Linux :
 
 ```bash
-for n in portal traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy auth; do
-  echo "127.0.0.1 $n.test" | sudo tee -a /etc/hosts >/dev/null
+echo "127.0.0.1 dev.test" | sudo tee -a /etc/hosts >/dev/null   # le portail
+for n in auth traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy; do
+  echo "127.0.0.1 $n.dev.test" | sudo tee -a /etc/hosts >/dev/null
 done
 ```
 
@@ -151,8 +163,8 @@ dnsmasq permet de router tout le TLD d'un coup ; sur Linux, dnsmasq ou
 systemd-resolved font la même chose. Les deux sortent du cadre de ces scripts,
 qui s'en tiennent au fichier hosts pour rester lisibles et réversibles.
 
-Chaque service répond sur deux domaines équivalents, par exemple `minio.test` et
-`minio.localhost`. Le second marche dans le navigateur sans toucher au fichier hosts.
+Chaque service répond sur deux domaines équivalents, par exemple `minio.dev.test` et
+`minio.dev.localhost`. Le second marche dans le navigateur sans toucher au fichier hosts.
 
 ## HTTPS
 
@@ -184,7 +196,7 @@ gestionnaire de paquets sous Linux — avec repli sur le binaire officiel dans
 winget install FiloSottile.mkcert
 mkcert -install
 cd config\traefik\certs
-mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" "*.auth.test" "*.auth.localhost" localhost 127.0.0.1 ::1
+mkcert -cert-file local.pem -key-file local-key.pem "dev.test" "*.dev.test" "dev.localhost" "*.dev.localhost" localhost 127.0.0.1 ::1
 cd ..\..\..
 Copy-Item config\traefik\dynamic\tls.yml.example config\traefik\dynamic\tls.yml
 docker compose restart traefik
@@ -197,7 +209,7 @@ brew install mkcert nss                      # macOS
 sudo apt install mkcert libnss3-tools        # Debian, Ubuntu
 mkcert -install
 cd config/traefik/certs
-mkcert -cert-file local.pem -key-file local-key.pem "*.test" "*.localhost" "*.auth.test" "*.auth.localhost" localhost 127.0.0.1 ::1
+mkcert -cert-file local.pem -key-file local-key.pem "dev.test" "*.dev.test" "dev.localhost" "*.dev.localhost" localhost 127.0.0.1 ::1
 chmod 0644 local.pem local-key.pem           # Traefik lit la clé en non-root
 cd ../../..
 cp config/traefik/dynamic/tls.yml.example config/traefik/dynamic/tls.yml
@@ -206,6 +218,10 @@ docker compose restart traefik
 
 Le paquet nss / libnss3-tools n'est pas décoratif : sans lui, mkcert installe
 l'autorité pour le système mais pas pour Firefox, qui tient son propre magasin.
+
+Le domaine nu `dev.test` est listé en plus du joker : un certificat pour `*.dev.test`
+ne couvre que les noms d'un niveau en dessous, jamais le domaine lui-même. Sans cette
+entrée, le portail serait le seul service à déclencher un avertissement.
 
 À savoir avant de lancer `mkcert -install` : la commande ajoute une autorité racine
 au magasin de certificats de la machine. C'est le prix à payer pour du HTTPS local
@@ -223,49 +239,71 @@ Pour forcer la redirection HTTP vers HTTPS, ajouter au bloc `command` de traefik
 
 ## Authentification
 
-Tinyauth sert une page de connexion sur https://auth.test et joue aussi le rôle de
-fournisseur OIDC, de client OAuth (GitHub, Google, provider générique) et de pont LDAP.
-Le compte local livré est `dev` / `devauthpass`.
+Tinyauth est la page de connexion de la stack : une adresse à elle, https://auth.dev.test,
+et un middleware Traefik `tinyauth@docker` que n'importe quel routeur peut appeler. Le
+portail est le seul à s'en servir par défaut, parce qu'il affiche tous les identifiants.
 
-**Aucun service de la stack n'est protégé par défaut.** Traefik expose un middleware
-`tinyauth@docker` prêt à l'emploi ; tant qu'aucun routeur ne le référence, rien ne change.
+https://dev.test renvoie donc vers la page de connexion tant qu'aucune session
+n'existe ; après connexion avec `dev` / `devauthpass`, le portail s'affiche normalement
+et reçoit au passage les en-têtes `Remote-User`, `Remote-Name` et `Remote-Email`. Le
+bouton de déconnexion de son en-tête renvoie vers `/logout` sur tinyauth : la session y
+est détruite, puis le formulaire de connexion réapparaît.
 
-Sans les entrées `.test` dans le fichier hosts, mettre `TINYAUTH_APP_URL=https://auth.localhost`
-dans le `.env` : c'est la seule URL de la stack qui doit être absolue, puisque tinyauth
-y renvoie le navigateur après connexion. Tout ce qui suit se transpose alors en
-`.localhost`, que le navigateur résout sans fichier hosts.
+Deux détails expliquent la forme du montage :
 
-### Mettre un service derrière la page de connexion
+- **Toute la stack vit sous `dev.test`.** Tinyauth pose son cookie de session sur le
+  domaine parent de son `TINYAUTH_APP_URL` : `auth.dev.test` donne un cookie valable pour
+  `dev.test`, donc pour `phpmyadmin.dev.test` et tous les autres — et pour le portail,
+  qui occupe `dev.test` lui-même, un hôte que tinyauth accepte puisqu'il est exactement
+  le domaine du cookie. Avec des noms à plat en `service.test`, ce cookie aurait dû porter
+  sur le TLD `test` lui-même, ce que les navigateurs refusent — et tinyauth avec eux.
+- **Ni le portail ni tinyauth ne publient de port.** `localhost:8080` court-circuiterait
+  la page de connexion, et tinyauth n'a besoin de parler qu'à Traefik.
 
-Le cookie de session est posé sur le domaine de `TINYAUTH_APP_URL`, soit `auth.test`.
-Un navigateur n'envoie ce cookie qu'à `auth.test` et à ses sous-domaines : `tools.test`
-et `auth.test` sont voisins, pas parents, et tinyauth refuse d'ailleurs explicitement
-de traiter un hôte hors de son domaine (`domain does not match cookie domain`).
+Sans les entrées `.dev.test` dans le fichier hosts, mettre
+`TINYAUTH_APP_URL=https://auth.dev.localhost` dans le `.env` : c'est la seule URL de
+la stack qui doit être absolue, puisque tinyauth y renvoie le navigateur.
 
-Un service protégé reçoit donc un **second hôte** en `*.auth.test`, à côté de son hôte
-habituel. Exemple avec phpMyAdmin, à ajouter à ses `labels` dans `docker-compose.yml` :
+Un service protégé suit d'ailleurs le parfum de domaine de cette URL : avec
+`auth.dev.test`, c'est `dev.test` qui fonctionne, pas `dev.localhost`, où
+le cookie de session n'existe pas. C'est pour ça que la carte du portail ne propose que
+son domaine `.test`, là où les services ouverts affichent les deux.
+
+Tinyauth garde sa carte dans le portail, avec son URL et ses identifiants : c'est un
+composant de la stack comme un autre, qui se visite et s'inspecte.
+
+### Protéger un autre service
+
+Une ligne par routeur, dans les `labels` du service visé :
 
 ```yaml
-      traefik.http.routers.phpmyadmin-auth.rule: Host(`phpmyadmin.auth.test`)
-      traefik.http.routers.phpmyadmin-auth.entrypoints: websecure
-      traefik.http.routers.phpmyadmin-auth.tls: "true"
-      traefik.http.routers.phpmyadmin-auth.middlewares: tinyauth@docker
-      traefik.http.routers.phpmyadmin-auth.service: phpmyadmin
+      traefik.http.routers.phpmyadmin.middlewares: tinyauth@docker
+      traefik.http.routers.phpmyadmin-tls.middlewares: tinyauth@docker
 ```
 
-Puis `docker compose up -d phpmyadmin`, une ligne `127.0.0.1 phpmyadmin.auth.test` dans
-le fichier hosts, et https://phpmyadmin.auth.test passe par la page de connexion. Le
-certificat mkcert couvre déjà `*.auth.test` depuis `setup-tls` ; sur un certificat plus
-ancien, relancer le script.
+Puis `docker compose up -d phpmyadmin`. Il n'y a rien d'autre à faire : le service est
+déjà sous `dev.test`, le cookie de session vaut donc pour lui. Son port direct, lui,
+reste ouvert et contourne la connexion — le retirer aussi si le but est de fermer l'accès.
 
-Une fois connecté, l'application reçoit les en-têtes `Remote-User`, `Remote-Name`,
-`Remote-Email` et `Remote-Groups` : de quoi brancher l'authentification transparente
-des applications qui savent les lire.
+### Ce que le montage donne à observer
 
-À garder en tête : seul le routeur en `.auth.test` est protégé. L'hôte d'origine
-(`phpmyadmin.test`) et le port direct (`localhost:8306`) restent ouverts — c'est
-voulu sur un poste de développement, où l'on veut pouvoir court-circuiter la connexion.
-Pour fermer ces accès, supprimer le routeur d'origine et la publication du port.
+Le trajet complet tient en quatre échanges, tous lisibles depuis les outils réseau du
+navigateur ou avec `curl` :
+
+1. `GET https://dev.test/` sans cookie : Traefik interroge le middleware, qui répond
+   401, et le navigateur part en 302 vers la page de connexion ;
+2. le formulaire poste sur `auth.dev.test`, qui renvoie un `Set-Cookie` de domaine
+   `dev.test` — c'est là que se joue tout le montage ;
+3. retour sur `https://dev.test/`, cookie en poche : le middleware répond 200 et
+   Traefik laisse passer la requête vers nginx ;
+4. au passage, les en-têtes `Remote-User`, `Remote-Name` et `Remote-Email` de la réponse
+   du middleware sont recopiés vers le portail, qui pourrait y ouvrir une session.
+
+Le bouton de déconnexion illustre la contre-épreuve : `/logout` efface le cookie sur
+`dev.test`, donc la session tombe pour tous les services protégés, pas seulement pour
+le portail. C'est le même trajet, à l'envers.
+
+Les logs racontent la même histoire : `docker compose logs -f tinyauth`.
 
 ### Changer le compte
 
@@ -276,9 +314,12 @@ docker compose run --rm tinyauth user create --interactive
 ```
 
 Répondre **oui** à « Format the output for Docker? » : les `$` du hash sont alors doublés,
-ce qu'attend le `.env`. Reporter la ligne obtenue, aligner `TINYAUTH_USER` et
-`TINYAUTH_PASSWORD` — qui ne servent qu'à l'affichage dans le portail — puis
-`docker compose up -d tinyauth portal`.
+ce qu'attend le `.env`. Reporter la ligne obtenue, puis `docker compose up -d tinyauth`.
+
+### Rouvrir le portail
+
+Supprimer les deux lignes `middlewares: tinyauth@docker` du bloc `labels` du portail et
+remettre `ports: ["8080:80"]`. Le service `tinyauth` n'a alors plus de raison d'être.
 
 ## Identifiants
 
@@ -294,7 +335,7 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 | Qdrant | clé API | `devkey` (en-tête `api-key`) |
 | Meilisearch | clé maître | `devmasterkey_min16chars` |
 | Traefik Manager | - | `devproxypass` (mot de passe seul, pas de nom d'utilisateur) |
-| Tinyauth | `dev` | `devauthpass` |
+| Tinyauth, donc accès au portail | `dev` | `devauthpass` |
 
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.
@@ -317,9 +358,9 @@ docker compose up -d portal
 ```
 
 Conséquence à connaître : le portail expose les identifiants de la stack à quiconque peut
-l'ouvrir (`localhost:8080`, `portal.test`). C'est le compromis assumé d'un poste de
-développement. Sur une machine partagée, supprimer le bloc `environment` du service
-`portal` fait revenir les cartes aux simples noms de variables.
+l'ouvrir. C'est précisément pourquoi il est le seul service placé derrière tinyauth — voir
+la section Authentification. Pour un cran de plus sur une machine partagée, supprimer le
+bloc `environment` du service `portal` fait revenir les cartes aux simples noms de variables.
 
 En développement (`npm run dev` dans `portal/`), Vite sert le même `/config.json` en
 relisant le `.env` de la racine à chaque requête.
@@ -414,7 +455,7 @@ en acceptant qu'une mise à jour puisse changer le comportement sans préavis.
 **Dockhand a le socket Docker en écriture.** C'est ce qui lui permet de démarrer,
 arrêter et supprimer des conteneurs, mais un accès en écriture à `/var/run/docker.sock`
 équivaut à un accès root sur la machine hôte. Acceptable pour une stack locale non
-exposée ; ne jamais publier `containers.test` au-delà de 127.0.0.1. Pour un usage plus
+exposée ; ne jamais publier `containers.dev.test` au-delà de 127.0.0.1. Pour un usage plus
 strict, passer par un socket-proxy en lecture seule, au prix des actions d'écriture.
 
 Dockhand est distribué sous licence **BUSL 1.1**, pas sous une licence open source
@@ -443,7 +484,7 @@ la variable n'est plus lue. Il n'y a pas de nom d'utilisateur, seulement un mot 
 ## Dépannage
 
 **Le port 80 est déjà pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
-`http://minio.test:8000`. Sous Windows, le coupable habituel est IIS ou un service
+`http://minio.dev.test:8000`. Sous Windows, le coupable habituel est IIS ou un service
 http.sys ; sous Linux, Apache ou nginx installés par la distribution ; sous macOS,
 le serveur web d'un autre environnement de développement.
 

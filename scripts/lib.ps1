@@ -38,7 +38,14 @@ function Get-RepoRoot {
 }
 
 function Get-StackHostnames {
-    return @('portal', 'traefik', 'minio', 'mail', 'redis', 'qdrant', 'meilisearch', 'neo4j', 'phpmyadmin', 'tools', 'containers', 'proxy', 'auth')
+    # Noms complets. Le niveau dev.test n'est pas decoratif : le cookie de session
+    # de tinyauth est pose sur ce domaine parent, ce qui permet a une seule page de
+    # connexion de couvrir n'importe quel service de la stack. Le portail occupe
+    # l'apex dev.test : tinyauth accepte l'hote qui est exactement le domaine du
+    # cookie, la porte d'entree de la stack est donc protegee comme les autres.
+    return @('dev.test', 'auth.dev.test', 'traefik.dev.test', 'minio.dev.test', 'mail.dev.test',
+        'redis.dev.test', 'qdrant.dev.test', 'meilisearch.dev.test', 'neo4j.dev.test', 'phpmyadmin.dev.test',
+        'tools.dev.test', 'containers.dev.test', 'proxy.dev.test')
 }
 
 function Get-DotEnv {
@@ -78,4 +85,3 @@ function Test-DockerEngine {
     $null = docker info --format '{{.ServerVersion}}' 2>$null
     return ($LASTEXITCODE -eq 0)
 }
-

@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Toggle } from "@base-ui/react/toggle";
-import { IconeLune, IconeOeil, IconeOeilBarre, IconeRafraichir, IconeSoleil } from "./Icons.jsx";
+import {
+  IconeDeconnexion,
+  IconeLune,
+  IconeOeil,
+  IconeOeilBarre,
+  IconeRafraichir,
+  IconeSoleil,
+} from "./Icons.jsx";
 import Infobulle from "./Infobulle.jsx";
 
 const bouton =
@@ -28,6 +35,7 @@ export default function Header({
   secretsVisibles,
   onBasculerSecrets,
   configDisponible,
+  urlDeconnexion,
 }) {
   const champ = useRef(null);
 
@@ -110,6 +118,23 @@ export default function Header({
               {theme === "clair" ? <IconeLune /> : <IconeSoleil />}
             </Toggle>
           </Infobulle>
+
+          {/* Un simple lien, pas un fetch : la page /logout de tinyauth vit sur une
+              autre origine que le portail et n'autorise pas les appels croisés. En y
+              naviguant, le navigateur y est same-origin, la session est détruite puis
+              le formulaire de connexion s'affiche. Le bouton disparaît si l'URL de
+              tinyauth est inconnue, plutôt que de proposer un lien mort. */}
+          {urlDeconnexion ? (
+            <Infobulle texte="Fermer la session tinyauth">
+              <a
+                href={urlDeconnexion.replace(/\/$/, "") + "/logout"}
+                className={bouton}
+                aria-label="Se déconnecter"
+              >
+                <IconeDeconnexion />
+              </a>
+            </Infobulle>
+          ) : null}
         </div>
       </div>
 

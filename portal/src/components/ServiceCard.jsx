@@ -45,17 +45,26 @@ export default function ServiceCard({ service, etat, config, secretsVisibles }) 
             {service.urlTest.replace("https://", "")}
             <IconeLien width={12} height={12} />
           </a>
-          <a href={service.urlLocalhost} target="_blank" rel="noreferrer" className={chip}>
-            {service.urlLocalhost.replace("https://", "")}
-          </a>
-          <a
-            href={"http://localhost:" + service.portDirect}
-            target="_blank"
-            rel="noreferrer"
-            className={chip}
-          >
-            localhost:{service.portDirect}
-          </a>
+          {/* Un service derrière tinyauth ne répond que sur le parfum de domaine de
+              TINYAUTH_APP_URL : la carte n'affiche alors pas l'alias .localhost, dont
+              le cookie de session n'existe pas. */}
+          {service.urlLocalhost ? (
+            <a href={service.urlLocalhost} target="_blank" rel="noreferrer" className={chip}>
+              {service.urlLocalhost.replace("https://", "")}
+            </a>
+          ) : null}
+          {/* Un service sans port publié n'est joignable qu'à travers Traefik : la
+              puce d'accès direct disparaît plutôt que de pointer vers le vide. */}
+          {service.portDirect ? (
+            <a
+              href={"http://localhost:" + service.portDirect}
+              target="_blank"
+              rel="noreferrer"
+              className={chip}
+            >
+              localhost:{service.portDirect}
+            </a>
+          ) : null}
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-bord bg-relief px-3 py-2">

@@ -37,7 +37,7 @@ grep -v -- "$MARQUEUR" "$FICHIER_HOSTS" > "$temporaire" || true
 
 if [ "$RETIRER" -eq 0 ]; then
   while IFS= read -r nom; do
-    printf '127.0.0.1 %s.test %s\n' "$nom" "$MARQUEUR" >> "$temporaire"
+    printf '127.0.0.1 %s %s\n' "$nom" "$MARQUEUR" >> "$temporaire"
   done <<< "$(noms_stack)"
 fi
 
@@ -52,5 +52,5 @@ fi
 
 ok "$(noms_stack | wc -l | tr -d ' ') entrées écrites dans $FICHIER_HOSTS"
 while IFS= read -r nom; do
-  printf '           https://%s.test\n' "$nom"
+  printf '           https://%s\n' "$nom"
 done <<< "$(noms_stack)"
