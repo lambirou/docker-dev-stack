@@ -53,6 +53,8 @@ services:
       PMA_PORT: 3306
       UPLOAD_LIMIT: 512M
     ports: ["${PHPMYADMIN_PORT:-8306}:80"]
+    volumes:
+      - ./config/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
     depends_on:
       mariadb:
         condition: service_healthy
