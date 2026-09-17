@@ -254,6 +254,7 @@ services:
       traefik.http.routers.redisinsight.rule: Host(`redis.dev.test`) || Host(`redis.dev.localhost`)
       traefik.http.routers.redisinsight.entrypoints: websecure
       traefik.http.routers.redisinsight.tls: "true"
+      traefik.http.routers.redisinsight.middlewares: tinyauth@docker
       traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
 
   portal:
