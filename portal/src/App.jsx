@@ -50,9 +50,14 @@ export default function App() {
       <footer className="mt-14 border-t border-bord pt-6 text-xs leading-relaxed text-attenue">
         <p>
           Les sondes interrogent le port publié sur <code className="font-mono">localhost</code>,
-          pas le domaine <code className="font-mono">.test</code> : une carte reste fiable même
-          sans entrée dans le fichier hosts. Une réponse opaque ne dit pas si le service est
-          sain, seulement qu'il répond.
+          en HTTP simple, pas le domaine <code className="font-mono">.test</code> : une carte
+          reste fiable même sans entrée dans le fichier hosts. Une réponse opaque ne dit pas si
+          le service est sain, seulement qu'il répond.
+        </p>
+        <p className="mt-2">
+          Les services sont servis en HTTPS derrière le proxy : le port 80 redirige vers 443.
+          Les ports directs, eux, restent en HTTP et court-circuitent le proxy — pratique pour
+          déboguer, à ne pas confondre avec l'accès normal.
         </p>
         <p className="mt-2">
           Les URL en <code className="font-mono">.test</code> exigent{" "}

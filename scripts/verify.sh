@@ -82,14 +82,17 @@ etape 'Routage Traefik'
 PORT_HTTP=$(cfg TRAEFIK_HTTP_PORT 80)
 PORT_HTTPS=$(cfg TRAEFIK_HTTPS_PORT 443)
 
+# La stack est servie en HTTPS de bout en bout : le port 80 ne sert plus qu'à
+# rediriger. Un 301 est donc la réponse attendue en HTTP, et c'est elle qu'on
+# vérifie — sans suivre la redirection, pour constater le code lui-même.
 while IFS= read -r nom; do
   fqdn="$nom"
   http=$(code_http "http://127.0.0.1:$PORT_HTTP/" "$fqdn")
   https=$(curl -sk -o /dev/null -w '%{http_code}' -A "$NAVIGATEUR" --resolve "$fqdn:$PORT_HTTPS:127.0.0.1" \
     "https://$fqdn:$PORT_HTTPS/" 2>/dev/null || printf '000')
   succes=1
-  case "$http" in 200|302) case "$https" in 200|302) succes=0 ;; esac ;; esac
-  resultat "$fqdn" "$succes" "http $http / https $https"
+  case "$http" in 301) case "$https" in 200|302) succes=0 ;; esac ;; esac
+  resultat "$fqdn" "$succes" "http $http -> https $https"
 done <<< "$(noms_stack)"
 
 etape 'Résultat'

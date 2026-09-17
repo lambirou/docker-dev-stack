@@ -79,12 +79,15 @@ try {
 
     Write-Step 'Routage Traefik'
 
+    # La stack est servie en HTTPS de bout en bout : le port 80 ne sert plus qu'a
+    # rediriger. Un 301 est donc la reponse attendue en HTTP, et c'est elle qu'on
+    # verifie — sans suivre la redirection, pour constater le code lui-meme.
     foreach ($name in Get-StackHostnames) {
         $fqdn = $name
         $http = Get-HttpCode -Url 'http://127.0.0.1/' -HostHeader $fqdn
         $https = curl.exe -sk -o NUL -w '%{http_code}' -A $navigateur --resolve ($fqdn + ':443:127.0.0.1') ('https://' + $fqdn + '/')
-        $ok = ($http -match '^(200|302)$') -and ($https -match '^(200|302)$')
-        Add-Result -Name $fqdn -Success $ok -Detail ('http ' + $http + ' / https ' + $https)
+        $ok = ($http -eq '301') -and ($https -match '^(200|302)$')
+        Add-Result -Name $fqdn -Success $ok -Detail ('http ' + $http + ' -> https ' + $https)
     }
 } finally {
     Pop-Location

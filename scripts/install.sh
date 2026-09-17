@@ -122,14 +122,18 @@ etape 'Terminé'
 ok "installation effectuée en $(( $(date +%s) - DEBUT )) secondes"
 cat <<'CONSOLES'
 
-  Consoles web :
-    phpMyAdmin     http://localhost:8306
-    MinIO          http://localhost:9001
-    Mailpit        http://localhost:8025
-    RedisInsight   http://localhost:5540
-    Qdrant         http://localhost:6333/dashboard
-    Neo4j          http://localhost:7474
-    Traefik        http://localhost:8090
+  Consoles web, servies en HTTPS :
+    Portail        https://dev.test
+    phpMyAdmin     https://phpmyadmin.dev.test
+    MinIO          https://minio.dev.test
+    Mailpit        https://mail.dev.test
+    RedisInsight   https://redis.dev.test
+    Qdrant         https://qdrant.dev.test/dashboard
+    Neo4j          https://neo4j.dev.test
+    Traefik        https://traefik.dev.test
+
+  Le port 80 redirige vers 443. Les ports directs (8306, 9001, 8025...)
+  restent ouverts en HTTP simple, sans passer par le proxy.
 CONSOLES
 printf '\n'
 [ "$WITH_HOSTS" -eq 0 ] && note 'pour les URL en .test : ./scripts/setup-hosts.sh'

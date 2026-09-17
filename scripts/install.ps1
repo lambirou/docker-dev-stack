@@ -111,14 +111,18 @@ $elapsed = [int]((Get-Date) - $started).TotalSeconds
 Write-Step 'Termine'
 Write-Ok ('installation effectuee en ' + $elapsed + ' secondes')
 Write-Host ''
-Write-Host '  Consoles web :' -ForegroundColor White
-Write-Host '    phpMyAdmin     http://localhost:8306'
-Write-Host '    MinIO          http://localhost:9001'
-Write-Host '    Mailpit        http://localhost:8025'
-Write-Host '    RedisInsight   http://localhost:5540'
-Write-Host '    Qdrant         http://localhost:6333/dashboard'
-Write-Host '    Neo4j          http://localhost:7474'
-Write-Host '    Traefik        http://localhost:8090'
+Write-Host '  Consoles web, servies en HTTPS :' -ForegroundColor White
+Write-Host '    Portail        https://dev.test'
+Write-Host '    phpMyAdmin     https://phpmyadmin.dev.test'
+Write-Host '    MinIO          https://minio.dev.test'
+Write-Host '    Mailpit        https://mail.dev.test'
+Write-Host '    RedisInsight   https://redis.dev.test'
+Write-Host '    Qdrant         https://qdrant.dev.test/dashboard'
+Write-Host '    Neo4j          https://neo4j.dev.test'
+Write-Host '    Traefik        https://traefik.dev.test'
+Write-Host ''
+Write-Host '  Le port 80 redirige vers 443. Les ports directs (8306, 9001, 8025...)' -ForegroundColor DarkGray
+Write-Host '  restent ouverts en HTTP simple, sans passer par le proxy.' -ForegroundColor DarkGray
 Write-Host ''
 if (-not $WithHosts) {
     Write-Note 'pour les URL en .test : .\scripts\setup-hosts.ps1 (administrateur)'

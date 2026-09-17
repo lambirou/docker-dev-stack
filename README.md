@@ -26,9 +26,12 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | tinyauth | `ghcr.io/tinyauthapp/tinyauth:v5.2.0` | Page de connexion partagée, middleware d'authentification de la stack | https://auth.dev.test | aucun |
 | traefik | `traefik:v3.7` | Reverse proxy | https://traefik.dev.test | 80, 443, API 8090 |
 
-Chaque service reste joignable en direct sur son port : le proxy est un confort, pas un
-passage obligé. Seules exceptions, le portail et tinyauth : ni l'un ni l'autre ne publie
-de port, le passage par Traefik — et donc par la page de connexion — est obligatoire.
+Toutes les URL ci-dessus sont servies en HTTPS : le port 80 redirige en 301 vers 443.
+
+Chaque service reste joignable en direct sur son port, en HTTP simple et sans passer par
+le proxy : le reverse proxy est un confort, pas un passage obligé. Seules exceptions, le
+portail et tinyauth : ni l'un ni l'autre ne publie de port, le passage par Traefik — et
+donc par la page de connexion — est obligatoire.
 
 ## Installation
 
@@ -168,8 +171,20 @@ Chaque service répond sur deux domaines équivalents, par exemple `minio.dev.te
 
 ## HTTPS
 
-Traefik écoute sur le port 443 et sert **tous** les services en HTTPS. Le port 80
-reste actif en parallèle : aucune redirection forcée, les deux protocoles fonctionnent.
+La stack est **entièrement servie en HTTPS**. Traefik écoute sur le port 443, et le
+port 80 ne sert plus qu'à rediriger : toute requête HTTP reçoit un **301** vers son
+équivalent HTTPS, quel que soit le domaine visé.
+
+La redirection est posée sur l'entrypoint lui-même, pas sur chaque routeur. Deux
+conséquences utiles : elle couvre aussi les hôtes inconnus, et chaque service n'a plus
+qu'un seul routeur — `websecure`, avec `tls: "true"` — au lieu de la paire
+`<service>` / `<service>-tls` d'avant. L'entrypoint `websecure` est par ailleurs déclaré
+`asDefault=true` : un service ajouté sans préciser son entrypoint atterrit en HTTPS,
+et un oubli d'étiquette ne peut plus ouvrir un accès en clair par mégarde.
+
+Les ports directs, eux, restent inchangés et en HTTP simple : `localhost:8306` pour
+phpMyAdmin, `localhost:9001` pour MinIO, etc. Ils ne passent pas par le proxy, donc ni
+par le TLS ni par la page de connexion — c'est un confort de débogage, à garder en tête.
 
 Par défaut Traefik présente un certificat auto-signé qu'il génère lui-même. Ça marche,
 mais le navigateur affiche un avertissement à chaque domaine.
@@ -230,12 +245,19 @@ sans avertissement, et ça reste réversible avec `mkcert -uninstall`.
 Let's Encrypt n'est pas une option ici : les domaines `.test` ne sont pas résolvables
 publiquement, donc aucune validation ACME ne peut aboutir.
 
-Pour forcer la redirection HTTP vers HTTPS, ajouter au bloc `command` de traefik :
+Pour revenir à un port 80 servi en clair plutôt qu'en redirection, retirer ces trois
+lignes du bloc `command` de traefik, puis redonner un routeur `web` aux services voulus :
 
 ```yaml
 - --entrypoints.web.http.redirections.entrypoint.to=websecure
 - --entrypoints.web.http.redirections.entrypoint.scheme=https
+- --entrypoints.web.http.redirections.entrypoint.permanent=true
 ```
+
+Le `permanent=true` renvoie un 301 plutôt qu'un 302. Les navigateurs le mettent en
+cache : après un premier passage, ils vont directement en HTTPS sans repasser par le
+port 80. Pratique en usage courant, gênant pendant un test de bascule — d'où le
+rappel, si le comportement semble figé, de vider le cache de redirection du navigateur.
 
 ## Authentification
 
@@ -260,6 +282,13 @@ Deux détails expliquent la forme du montage :
 - **Ni le portail ni tinyauth ne publient de port.** `localhost:8080` court-circuiterait
   la page de connexion, et tinyauth n'a besoin de parler qu'à Traefik.
 
+Depuis la bascule en tout-HTTPS, le cookie de session porte l'attribut `Secure`
+(`TINYAUTH_AUTH_SECURECOOKIE: "true"`) : le navigateur refuse alors de le renvoyer sur
+une origine en clair. C'est possible précisément parce qu'aucun des deux services ne
+publie de port et que le port 80 ne fait plus que rediriger — il ne reste aucune
+origine HTTP par laquelle la session pourrait fuiter. L'en-tête complet est
+`HttpOnly; Secure; SameSite=Lax`, sur `Domain=dev.test`.
+
 Sans les entrées `.dev.test` dans le fichier hosts, mettre
 `TINYAUTH_APP_URL=https://auth.dev.localhost` dans le `.env` : c'est la seule URL de
 la stack qui doit être absolue, puisque tinyauth y renvoie le navigateur.
@@ -274,11 +303,11 @@ composant de la stack comme un autre, qui se visite et s'inspecte.
 
 ### Protéger un autre service
 
-Une ligne par routeur, dans les `labels` du service visé :
+Une seule ligne désormais, dans les `labels` du service visé — chaque service n'a plus
+qu'un routeur depuis la bascule en tout-HTTPS :
 
 ```yaml
       traefik.http.routers.phpmyadmin.middlewares: tinyauth@docker
-      traefik.http.routers.phpmyadmin-tls.middlewares: tinyauth@docker
 ```
 
 Puis `docker compose up -d phpmyadmin`. Il n'y a rien d'autre à faire : le service est
@@ -318,8 +347,9 @@ ce qu'attend le `.env`. Reporter la ligne obtenue, puis `docker compose up -d ti
 
 ### Rouvrir le portail
 
-Supprimer les deux lignes `middlewares: tinyauth@docker` du bloc `labels` du portail et
+Supprimer la ligne `middlewares: tinyauth@docker` du bloc `labels` du portail et
 remettre `ports: ["8080:80"]`. Le service `tinyauth` n'a alors plus de raison d'être.
+À noter : `localhost:8080` serait servi en HTTP simple, hors du proxy et donc hors TLS.
 
 ## Identifiants
 
@@ -483,10 +513,20 @@ la variable n'est plus lue. Il n'y a pas de nom d'utilisateur, seulement un mot 
 
 ## Dépannage
 
-**Le port 80 est déjà pris.** Changer `TRAEFIK_HTTP_PORT` dans `.env`, les URL deviennent
-`http://minio.dev.test:8000`. Sous Windows, le coupable habituel est IIS ou un service
-http.sys ; sous Linux, Apache ou nginx installés par la distribution ; sous macOS,
-le serveur web d'un autre environnement de développement.
+**Le port 443 est déjà pris.** Changer `TRAEFIK_HTTPS_PORT` dans `.env` : les URL
+deviennent `https://minio.dev.test:8443`. Le port 80 se change de la même façon avec
+`TRAEFIK_HTTP_PORT`, mais il ne sert plus qu'à rediriger. Sous Windows, le coupable
+habituel est IIS ou un service http.sys ; sous Linux, Apache ou nginx installés par la
+distribution ; sous macOS, le serveur web d'un autre environnement de développement.
+
+**Une URL reste bloquée en HTTPS après un retour en arrière.** La redirection est un 301,
+que les navigateurs mettent en cache durablement : ils vont directement en HTTPS sans
+redemander le port 80. Vider le cache de redirection du navigateur, ou tester en fenêtre
+privée. `curl` n'a pas ce comportement et voit toujours la vraie réponse du port 80.
+
+**Le navigateur avertit malgré mkcert, sur `.dev.localhost` uniquement.** Le certificat
+couvre bien `*.dev.localhost`, mais ce nom doit figurer dans le certificat régénéré :
+relancer `scripts/setup-tls.ps1` (ou `.sh`) si le fichier date d'avant la bascule.
 
 **Une URL `.test` renvoie 404 juste après le démarrage.** Le service répond mais n'est pas
 encore prêt. Neo4j est le plus lent. Vérifier avec `docker compose ps` que la santé est verte.

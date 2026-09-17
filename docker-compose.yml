@@ -61,10 +61,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.phpmyadmin.rule: Host(`phpmyadmin.dev.test`) || Host(`phpmyadmin.dev.localhost`)
-      traefik.http.routers.phpmyadmin.entrypoints: web
-      traefik.http.routers.phpmyadmin-tls.rule: Host(`phpmyadmin.dev.test`) || Host(`phpmyadmin.dev.localhost`)
-      traefik.http.routers.phpmyadmin-tls.entrypoints: websecure
-      traefik.http.routers.phpmyadmin-tls.tls: "true"
+      traefik.http.routers.phpmyadmin.entrypoints: websecure
+      traefik.http.routers.phpmyadmin.tls: "true"
       traefik.http.services.phpmyadmin.loadbalancer.server.port: "80"
 
   qdrant:
@@ -82,10 +80,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.qdrant.rule: Host(`qdrant.dev.test`) || Host(`qdrant.dev.localhost`)
-      traefik.http.routers.qdrant.entrypoints: web
-      traefik.http.routers.qdrant-tls.rule: Host(`qdrant.dev.test`) || Host(`qdrant.dev.localhost`)
-      traefik.http.routers.qdrant-tls.entrypoints: websecure
-      traefik.http.routers.qdrant-tls.tls: "true"
+      traefik.http.routers.qdrant.entrypoints: websecure
+      traefik.http.routers.qdrant.tls: "true"
       traefik.http.services.qdrant.loadbalancer.server.port: "6333"
 
   meilisearch:
@@ -103,10 +99,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.meilisearch.rule: Host(`meilisearch.dev.test`) || Host(`meilisearch.dev.localhost`)
-      traefik.http.routers.meilisearch.entrypoints: web
-      traefik.http.routers.meilisearch-tls.rule: Host(`meilisearch.dev.test`) || Host(`meilisearch.dev.localhost`)
-      traefik.http.routers.meilisearch-tls.entrypoints: websecure
-      traefik.http.routers.meilisearch-tls.tls: "true"
+      traefik.http.routers.meilisearch.entrypoints: websecure
+      traefik.http.routers.meilisearch.tls: "true"
       traefik.http.services.meilisearch.loadbalancer.server.port: "7700"
 
   neo4j:
@@ -132,10 +126,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.neo4j.rule: Host(`neo4j.dev.test`) || Host(`neo4j.dev.localhost`)
-      traefik.http.routers.neo4j.entrypoints: web
-      traefik.http.routers.neo4j-tls.rule: Host(`neo4j.dev.test`) || Host(`neo4j.dev.localhost`)
-      traefik.http.routers.neo4j-tls.entrypoints: websecure
-      traefik.http.routers.neo4j-tls.tls: "true"
+      traefik.http.routers.neo4j.entrypoints: websecure
+      traefik.http.routers.neo4j.tls: "true"
       traefik.http.services.neo4j.loadbalancer.server.port: "7474"
 
   redis:
@@ -172,7 +164,17 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedByDefault=false
       - --entrypoints.web.address=:80
+      # Toute la stack est servie en HTTPS : l'entrypoint web ne sert plus qu'a
+      # rediriger. La redirection est posee au niveau de l'entrypoint, pas d'un
+      # routeur : elle s'applique donc a chaque requete du port 80, y compris aux
+      # hotes inconnus, et dispense chaque service d'un second routeur.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
       - --entrypoints.websecure.address=:443
+      # Seul entrypoint applicatif : un service qui ne precise rien atterrit en
+      # HTTPS, et un oubli d'etiquette ne peut plus ouvrir un acces en clair.
+      - --entrypoints.websecure.asDefault=true
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
       - --log.level=INFO
@@ -187,14 +189,10 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.traefik.rule: Host(`traefik.dev.test`) || Host(`traefik.dev.localhost`)
-      traefik.http.routers.traefik.entrypoints: web
+      traefik.http.routers.traefik.entrypoints: websecure
+      traefik.http.routers.traefik.tls: "true"
       traefik.http.routers.traefik.service: api@internal
       traefik.http.routers.traefik.middlewares: tinyauth@docker
-      traefik.http.routers.traefik-tls.rule: Host(`traefik.dev.test`) || Host(`traefik.dev.localhost`)
-      traefik.http.routers.traefik-tls.entrypoints: websecure
-      traefik.http.routers.traefik-tls.tls: "true"
-      traefik.http.routers.traefik-tls.service: api@internal
-      traefik.http.routers.traefik-tls.middlewares: tinyauth@docker
 
   minio:
     <<: *common
@@ -217,10 +215,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.minio.rule: Host(`minio.dev.test`) || Host(`minio.dev.localhost`)
-      traefik.http.routers.minio.entrypoints: web
-      traefik.http.routers.minio-tls.rule: Host(`minio.dev.test`) || Host(`minio.dev.localhost`)
-      traefik.http.routers.minio-tls.entrypoints: websecure
-      traefik.http.routers.minio-tls.tls: "true"
+      traefik.http.routers.minio.entrypoints: websecure
+      traefik.http.routers.minio.tls: "true"
       traefik.http.services.minio.loadbalancer.server.port: "9001"
 
   mailpit:
@@ -238,12 +234,9 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.mailpit.rule: Host(`mail.dev.test`) || Host(`mail.dev.localhost`)
-      traefik.http.routers.mailpit.entrypoints: web
+      traefik.http.routers.mailpit.entrypoints: websecure
+      traefik.http.routers.mailpit.tls: "true"
       traefik.http.routers.mailpit.middlewares: tinyauth@docker
-      traefik.http.routers.mailpit-tls.rule: Host(`mail.dev.test`) || Host(`mail.dev.localhost`)
-      traefik.http.routers.mailpit-tls.entrypoints: websecure
-      traefik.http.routers.mailpit-tls.tls: "true"
-      traefik.http.routers.mailpit-tls.middlewares: tinyauth@docker
       traefik.http.services.mailpit.loadbalancer.server.port: "8025"
 
   redisinsight:
@@ -259,10 +252,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.redisinsight.rule: Host(`redis.dev.test`) || Host(`redis.dev.localhost`)
-      traefik.http.routers.redisinsight.entrypoints: web
-      traefik.http.routers.redisinsight-tls.rule: Host(`redis.dev.test`) || Host(`redis.dev.localhost`)
-      traefik.http.routers.redisinsight-tls.entrypoints: websecure
-      traefik.http.routers.redisinsight-tls.tls: "true"
+      traefik.http.routers.redisinsight.entrypoints: websecure
+      traefik.http.routers.redisinsight.tls: "true"
       traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
 
   portal:
@@ -302,18 +293,15 @@ services:
         condition: service_healthy
     labels:
       traefik.enable: "true"
-      # Le portail est le service protege par defaut : ses deux routeurs passent par
-      # le middleware tinyauth. Il occupe l'apex du domaine, dev.test : c'est la porte
+      # Le portail est le service protege par defaut : son routeur passe par le
+      # middleware tinyauth. Il occupe l'apex du domaine, dev.test : c'est la porte
       # d'entree de la stack, et le cookie pose par tinyauth sur dev.test vaut aussi
       # pour ce nom la. Aucun port n'est publie sur l'hote, sinon localhost:8080
       # court-circuiterait la page de connexion.
       traefik.http.routers.portal.rule: Host(`dev.test`) || Host(`dev.localhost`)
-      traefik.http.routers.portal.entrypoints: web
+      traefik.http.routers.portal.entrypoints: websecure
+      traefik.http.routers.portal.tls: "true"
       traefik.http.routers.portal.middlewares: tinyauth@docker
-      traefik.http.routers.portal-tls.rule: Host(`dev.test`) || Host(`dev.localhost`)
-      traefik.http.routers.portal-tls.entrypoints: websecure
-      traefik.http.routers.portal-tls.tls: "true"
-      traefik.http.routers.portal-tls.middlewares: tinyauth@docker
       traefik.http.services.portal.loadbalancer.server.port: "80"
 
   it-tools:
@@ -329,10 +317,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.it-tools.rule: Host(`tools.dev.test`) || Host(`tools.dev.localhost`)
-      traefik.http.routers.it-tools.entrypoints: web
-      traefik.http.routers.it-tools-tls.rule: Host(`tools.dev.test`) || Host(`tools.dev.localhost`)
-      traefik.http.routers.it-tools-tls.entrypoints: websecure
-      traefik.http.routers.it-tools-tls.tls: "true"
+      traefik.http.routers.it-tools.entrypoints: websecure
+      traefik.http.routers.it-tools.tls: "true"
       traefik.http.services.it-tools.loadbalancer.server.port: "80"
 
   dockhand:
@@ -348,10 +334,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.dockhand.rule: Host(`containers.dev.test`) || Host(`containers.dev.localhost`)
-      traefik.http.routers.dockhand.entrypoints: web
-      traefik.http.routers.dockhand-tls.rule: Host(`containers.dev.test`) || Host(`containers.dev.localhost`)
-      traefik.http.routers.dockhand-tls.entrypoints: websecure
-      traefik.http.routers.dockhand-tls.tls: "true"
+      traefik.http.routers.dockhand.entrypoints: websecure
+      traefik.http.routers.dockhand.tls: "true"
       traefik.http.services.dockhand.loadbalancer.server.port: "3000"
 
   traefik-manager:
@@ -376,7 +360,11 @@ services:
       DOMAINS: test,localhost
       # Les certificats viennent de mkcert, pas d'un resolveur ACME.
       CERT_RESOLVER: none
-      # La stack repond aussi en HTTP simple sur localhost.
+      # Seule entorse au tout-HTTPS, et elle est deliberee : proxy.dev.test passe
+      # bien par TLS, mais le port direct 8083 reste servi en HTTP simple. Un cookie
+      # Secure y serait refuse par le navigateur, et la connexion echouerait sans
+      # message lisible. Retirer la ligne ports: ci-dessous permet de passer cette
+      # valeur a "true" et de fermer le dernier acces en clair.
       COOKIE_SECURE: "false"
       PROXY_FIX_HOPS: "1"
     ports: ["${TRAEFIK_MANAGER_PORT:-8083}:5000"]
@@ -388,10 +376,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.traefik-manager.rule: Host(`proxy.dev.test`) || Host(`proxy.dev.localhost`)
-      traefik.http.routers.traefik-manager.entrypoints: web
-      traefik.http.routers.traefik-manager-tls.rule: Host(`proxy.dev.test`) || Host(`proxy.dev.localhost`)
-      traefik.http.routers.traefik-manager-tls.entrypoints: websecure
-      traefik.http.routers.traefik-manager-tls.tls: "true"
+      traefik.http.routers.traefik-manager.entrypoints: websecure
+      traefik.http.routers.traefik-manager.tls: "true"
       traefik.http.services.traefik-manager.loadbalancer.server.port: "5000"
 
   tinyauth:
@@ -407,9 +393,11 @@ services:
       TINYAUTH_APPURL: ${TINYAUTH_APP_URL:-https://auth.dev.test}
       # Couple utilisateur:hash bcrypt, le seul que tinyauth verifie reellement.
       TINYAUTH_AUTH_USERS: ${TINYAUTH_AUTH_USERS}
-      # La stack repond aussi en HTTP simple : un cookie Secure ne serait jamais
-      # renvoye par le navigateur sur http://portal.dev.localhost.
-      TINYAUTH_AUTH_SECURECOOKIE: "false"
+      # Toute la stack est servie en HTTPS et le port 80 ne fait plus que rediriger :
+      # le cookie de session porte donc l'attribut Secure, qui interdit au navigateur
+      # de le renvoyer en clair. Ni tinyauth ni le portail ne publient de port, il ne
+      # reste aucune origine HTTP par laquelle la session pourrait fuiter.
+      TINYAUTH_AUTH_SECURECOOKIE: "true"
       # Pas d'appel sortant pour verifier les nouvelles versions.
       TINYAUTH_ANALYTICS_ENABLED: "false"
     volumes:
@@ -419,10 +407,8 @@ services:
       # Rien a publier sur l'hote : seul Traefik parle a tinyauth. La page de
       # connexion a son propre nom, au meme niveau que les autres services.
       traefik.http.routers.tinyauth.rule: Host(`auth.dev.test`) || Host(`auth.dev.localhost`)
-      traefik.http.routers.tinyauth.entrypoints: web
-      traefik.http.routers.tinyauth-tls.rule: Host(`auth.dev.test`) || Host(`auth.dev.localhost`)
-      traefik.http.routers.tinyauth-tls.entrypoints: websecure
-      traefik.http.routers.tinyauth-tls.tls: "true"
+      traefik.http.routers.tinyauth.entrypoints: websecure
+      traefik.http.routers.tinyauth.tls: "true"
       traefik.http.services.tinyauth.loadbalancer.server.port: "3000"
       # Le middleware lui-meme. Le referencer depuis un routeur suffit a mettre le
       # service correspondant derriere la page de connexion :
