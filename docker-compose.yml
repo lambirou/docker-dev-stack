@@ -189,10 +189,12 @@ services:
       traefik.http.routers.traefik.rule: Host(`traefik.dev.test`) || Host(`traefik.dev.localhost`)
       traefik.http.routers.traefik.entrypoints: web
       traefik.http.routers.traefik.service: api@internal
+      traefik.http.routers.traefik.middlewares: tinyauth@docker
       traefik.http.routers.traefik-tls.rule: Host(`traefik.dev.test`) || Host(`traefik.dev.localhost`)
       traefik.http.routers.traefik-tls.entrypoints: websecure
       traefik.http.routers.traefik-tls.tls: "true"
       traefik.http.routers.traefik-tls.service: api@internal
+      traefik.http.routers.traefik-tls.middlewares: tinyauth@docker
 
   minio:
     <<: *common
@@ -237,9 +239,11 @@ services:
       traefik.enable: "true"
       traefik.http.routers.mailpit.rule: Host(`mail.dev.test`) || Host(`mail.dev.localhost`)
       traefik.http.routers.mailpit.entrypoints: web
+      traefik.http.routers.mailpit.middlewares: tinyauth@docker
       traefik.http.routers.mailpit-tls.rule: Host(`mail.dev.test`) || Host(`mail.dev.localhost`)
       traefik.http.routers.mailpit-tls.entrypoints: websecure
       traefik.http.routers.mailpit-tls.tls: "true"
+      traefik.http.routers.mailpit-tls.middlewares: tinyauth@docker
       traefik.http.services.mailpit.loadbalancer.server.port: "8025"
 
   redisinsight:
@@ -396,6 +400,7 @@ services:
     container_name: dev-tinyauth
     environment:
       TZ: ${TZ:-Africa/Abidjan}
+      TINYAUTH_UI_TITLE: "Dev Stack"
       # URL publique de la page de connexion. Elle fixe aussi le domaine du cookie
       # de session : sous auth.dev.test, ce cookie vaut pour dev.test, donc pour
       # n'importe quel service de la stack place derriere le middleware.
