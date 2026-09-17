@@ -337,6 +337,7 @@ services:
       traefik.http.routers.dockhand.rule: Host(`containers.dev.test`) || Host(`containers.dev.localhost`)
       traefik.http.routers.dockhand.entrypoints: websecure
       traefik.http.routers.dockhand.tls: "true"
+      traefik.http.routers.dockhand.middlewares: tinyauth@docker
       traefik.http.services.dockhand.loadbalancer.server.port: "3000"
 
   traefik-manager:
