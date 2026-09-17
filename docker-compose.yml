@@ -5,6 +5,54 @@ x-common: &common
   networks: [devnet]
 
 services:
+  portal:
+    <<: *common
+    build: .apps/portal
+    image: dev-stack-portal:local
+    container_name: dev-portal
+    # Lues au démarrage pour écrire /config.json : le portail affiche et copie les
+    # vrais identifiants sans qu'aucun d'eux n'entre dans le bundle. Après une
+    # modification du .env : docker compose up -d portal.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      TRAEFIK_MANAGER_ADMIN_PASSWORD: ${TRAEFIK_MANAGER_ADMIN_PASSWORD}
+      TINYAUTH_USER: ${TINYAUTH_USER}
+      TINYAUTH_PASSWORD: ${TINYAUTH_PASSWORD}
+      # Sert au bouton de deconnexion : le portail envoie simplement le navigateur
+      # sur <app url>/logout, page de tinyauth qui detruit la session puis renvoie
+      # vers le formulaire. Un appel en fetch depuis dev.test echouerait, faute
+      # d'en-tetes CORS cote tinyauth.
+      TINYAUTH_APP_URL: ${TINYAUTH_APP_URL:-https://auth.dev.test}
+    # Le portail ne repond que derriere tinyauth : inutile de l'ouvrir avant que
+    # la page de connexion ne soit prete a repondre aux appels du middleware.
+    depends_on:
+      tinyauth:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      # Le portail est le service protege par defaut : son routeur passe par le
+      # middleware tinyauth. Il occupe l'apex du domaine, dev.test : c'est la porte
+      # d'entree de la stack, et le cookie pose par tinyauth sur dev.test vaut aussi
+      # pour ce nom la. Aucun port n'est publie sur l'hote, sinon localhost:8080
+      # court-circuiterait la page de connexion.
+      traefik.http.routers.portal.rule: Host(`dev.test`) || Host(`dev.localhost`)
+      traefik.http.routers.portal.entrypoints: websecure
+      traefik.http.routers.portal.tls: "true"
+      traefik.http.routers.portal.middlewares: tinyauth@docker
+      traefik.http.services.portal.loadbalancer.server.port: "80"
+
   postgres:
     <<: *common
     image: pgvector/pgvector:pg17
@@ -256,54 +304,6 @@ services:
       traefik.http.routers.redisinsight.tls: "true"
       traefik.http.routers.redisinsight.middlewares: tinyauth@docker
       traefik.http.services.redisinsight.loadbalancer.server.port: "5540"
-
-  portal:
-    <<: *common
-    build: ./portal
-    image: dev-stack-portal:local
-    container_name: dev-portal
-    # Lues au démarrage pour écrire /config.json : le portail affiche et copie les
-    # vrais identifiants sans qu'aucun d'eux n'entre dans le bundle. Après une
-    # modification du .env : docker compose up -d portal.
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      MARIADB_USER: ${MARIADB_USER}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${MARIADB_DATABASE}
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      TRAEFIK_MANAGER_ADMIN_PASSWORD: ${TRAEFIK_MANAGER_ADMIN_PASSWORD}
-      TINYAUTH_USER: ${TINYAUTH_USER}
-      TINYAUTH_PASSWORD: ${TINYAUTH_PASSWORD}
-      # Sert au bouton de deconnexion : le portail envoie simplement le navigateur
-      # sur <app url>/logout, page de tinyauth qui detruit la session puis renvoie
-      # vers le formulaire. Un appel en fetch depuis dev.test echouerait, faute
-      # d'en-tetes CORS cote tinyauth.
-      TINYAUTH_APP_URL: ${TINYAUTH_APP_URL:-https://auth.dev.test}
-    # Le portail ne repond que derriere tinyauth : inutile de l'ouvrir avant que
-    # la page de connexion ne soit prete a repondre aux appels du middleware.
-    depends_on:
-      tinyauth:
-        condition: service_healthy
-    labels:
-      traefik.enable: "true"
-      # Le portail est le service protege par defaut : son routeur passe par le
-      # middleware tinyauth. Il occupe l'apex du domaine, dev.test : c'est la porte
-      # d'entree de la stack, et le cookie pose par tinyauth sur dev.test vaut aussi
-      # pour ce nom la. Aucun port n'est publie sur l'hote, sinon localhost:8080
-      # court-circuiterait la page de connexion.
-      traefik.http.routers.portal.rule: Host(`dev.test`) || Host(`dev.localhost`)
-      traefik.http.routers.portal.entrypoints: websecure
-      traefik.http.routers.portal.tls: "true"
-      traefik.http.routers.portal.middlewares: tinyauth@docker
-      traefik.http.services.portal.loadbalancer.server.port: "80"
 
   it-tools:
     <<: *common
