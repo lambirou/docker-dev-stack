@@ -69,6 +69,28 @@ export const services = [
     ],
   },
   {
+    id: "prisma-studio",
+    nom: "Prisma Studio",
+    role: "Console de la base PostgreSQL : parcourir, filtrer et éditer les données",
+    motsCles: ["prisma", "studio", "postgres", "postgresql", "sql", "interface", "console", "tables", "lignes", "éditer", "données", "requête", "filtrer", "orm", "schéma", "pgadmin", "adminer"],
+    categorie: "donnees",
+    image: "build local (node:22-alpine)",
+    // Derrière tinyauth, comme le portail : la console lit et écrit dans la base sans
+    // redemander le moindre mot de passe. Pas d'alias .localhost, donc, puisque le
+    // cookie de session de tinyauth vit sur dev.test.
+    urlTest: "https://prisma.dev.test",
+    urlLocalhost: null,
+    portDirect: 5555,
+    sonde: "http://localhost:5555/healthz",
+    // Rien à saisir pour entrer : la chaîne de connexion vit côté serveur et n'est
+    // jamais envoyée au navigateur. C'est tout l'intérêt du montage embarqué — et la
+    // raison pour laquelle la page est placée derrière la connexion de la stack.
+    identifiants: [
+      { label: "Base", valeur: "${POSTGRES_DB}" },
+      { label: "Connexion", valeur: "côté serveur, hors du navigateur" },
+    ],
+  },
+  {
     id: "neo4j",
     nom: "Neo4j",
     role: "Base graphe avec APOC, version LTS 5.26",

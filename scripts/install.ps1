@@ -114,6 +114,7 @@ Write-Host ''
 Write-Host '  Consoles web, servies en HTTPS :' -ForegroundColor White
 Write-Host '    Portail        https://dev.test'
 Write-Host '    phpMyAdmin     https://phpmyadmin.dev.test'
+Write-Host '    Prisma Studio  https://prisma.dev.test'
 Write-Host '    MinIO          https://minio.dev.test'
 Write-Host '    Mailpit        https://mail.dev.test'
 Write-Host '    RedisInsight   https://redis.dev.test'

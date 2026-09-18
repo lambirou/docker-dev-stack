@@ -7,7 +7,7 @@ x-common: &common
 services:
   portal:
     <<: *common
-    build: .apps/portal
+    build: ./apps/portal
     image: dev-stack-portal:local
     container_name: dev-portal
     # Lues au démarrage pour écrire /config.json : le portail affiche et copie les
@@ -112,6 +112,41 @@ services:
       traefik.http.routers.phpmyadmin.entrypoints: websecure
       traefik.http.routers.phpmyadmin.tls: "true"
       traefik.http.services.phpmyadmin.loadbalancer.server.port: "80"
+
+  prisma-studio:
+    <<: *common
+    build: ./apps/prisma-studio
+    image: dev-stack-prisma-studio:local
+    container_name: dev-prisma-studio
+    # Le BFF recompose lui-meme l'URL de connexion a partir de ces variables, et
+    # POSTGRES_HOST vaut le nom du service : la connexion part de l'interieur du
+    # reseau docker, pas de localhost. DATABASE_URL, si elle est renseignee dans le
+    # .env, prend le pas sur ce trio et permet de pointer une autre base.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      DATABASE_URL: ${PRISMA_STUDIO_DATABASE_URL:-}
+      PRISMA_STUDIO_STATEMENT_TIMEOUT: ${PRISMA_STUDIO_STATEMENT_TIMEOUT:-30}
+      # Pas d'appel sortant pour la telemetrie anonyme de @prisma/studio-core.
+      CHECKPOINT_DISABLE: "1"
+    ports: ["${PRISMA_STUDIO_PORT:-5555}:5555"]
+    # La console ne sert a rien tant que la base ne repond pas : attendre evite un
+    # premier ecran en erreur au demarrage de la stack.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      # Derriere tinyauth, comme le portail : cette console lit et ecrit dans la base
+      # sans redemander le moindre mot de passe, la connexion est son seul garde-fou.
+      # D'ou l'absence d'alias .localhost : le cookie de session vit sur dev.test.
+      traefik.http.routers.prisma-studio.rule: Host(`prisma.dev.test`)
+      traefik.http.routers.prisma-studio.entrypoints: websecure
+      traefik.http.routers.prisma-studio.tls: "true"
+      traefik.http.routers.prisma-studio.middlewares: tinyauth@docker
+      traefik.http.services.prisma-studio.loadbalancer.server.port: "5555"
 
   qdrant:
     <<: *common

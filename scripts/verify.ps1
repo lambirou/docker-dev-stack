@@ -68,6 +68,8 @@ try {
         @{ Name = 'minio'; Url = 'http://localhost:' + $cfg['MINIO_API_PORT'] + '/minio/health/live' },
         @{ Name = 'mailpit'; Url = 'http://localhost:' + $cfg['MAILPIT_UI_PORT'] + '/api/v1/info' },
         @{ Name = 'redisinsight'; Url = 'http://localhost:' + $cfg['REDISINSIGHT_PORT'] + '/api/health/' },
+        # La sonde interroge reellement Postgres : un 200 dit que la console est utilisable.
+        @{ Name = 'prisma-studio'; Url = 'http://localhost:' + $cfg['PRISMA_STUDIO_PORT'] + '/healthz' },
         @{ Name = 'it-tools'; Url = 'http://localhost:' + $cfg['IT_TOOLS_PORT'] + '/' },
         @{ Name = 'dockhand'; Url = 'http://localhost:' + $cfg['DOCKHAND_PORT'] + '/' },
         @{ Name = 'traefik-manager'; Url = 'http://localhost:' + $cfg['TRAEFIK_MANAGER_PORT'] + '/login' }

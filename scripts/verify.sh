@@ -72,6 +72,8 @@ verifier_endpoint meilisearch  "http://localhost:$(cfg MEILI_PORT 7700)/health"
 verifier_endpoint minio        "http://localhost:$(cfg MINIO_API_PORT 9000)/minio/health/live"
 verifier_endpoint mailpit      "http://localhost:$(cfg MAILPIT_UI_PORT 8025)/api/v1/info"
 verifier_endpoint redisinsight "http://localhost:$(cfg REDISINSIGHT_PORT 5540)/api/health/"
+# La sonde interroge réellement Postgres : un 200 dit que la console est utilisable.
+verifier_endpoint prisma-studio "http://localhost:$(cfg PRISMA_STUDIO_PORT 5555)/healthz"
 verifier_endpoint it-tools     "http://localhost:$(cfg IT_TOOLS_PORT 8081)/"
 verifier_endpoint dockhand     "http://localhost:$(cfg DOCKHAND_PORT 8082)/"
 # La racine redirige vers la page de connexion : on sonde /login, qui repond 200.

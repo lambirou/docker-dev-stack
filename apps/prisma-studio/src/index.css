@@ -1,0 +1,87 @@
+/* Studio apporte sa propre feuille de style, importée par App.jsx. Ce fichier lui
+   donne la pleine page, puis réaccorde sa palette sur celle du portail. */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.studio-hote {
+  height: 100%;
+  /* 100dvh plutôt que 100vh : sur mobile, la barre d'adresse qui se rétracte ne
+     laisse pas une bande vide sous la grille. */
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Studio suit prefers-color-scheme tout seul : il pose une classe .dark sur son
+   propre conteneur .ps, jamais sur <html>. C'est donc là qu'il faut viser.
+
+   La prop `theme` du composant n'est volontairement pas utilisée : la documentation
+   la décrit au format shadcn en triplets HSL, mais cette version (0.33) déclare ses
+   variables en oklch et n'injecte aucune feuille de style à partir de cette prop —
+   un thème passé par ce biais reste sans effet visible. Redéfinir les variables en
+   CSS, en revanche, fonctionne et se vérifie dans l'inspecteur.
+
+   Les valeurs viennent de apps/portal/src/index.css, converties en oklch. Seules les
+   couleurs sont touchées : Studio garde ses rayons, ses espacements, sa typographie. */
+
+.ps {
+  --background: oklch(0.9693 0.0074 260.73);
+  --foreground: oklch(0.2568 0.0473 261.22);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2568 0.0473 261.22);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2568 0.0473 261.22);
+  --primary: oklch(0.5876 0.1389 241.97);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9601 0.0103 261.79);
+  --secondary-foreground: oklch(0.2568 0.0473 261.22);
+  --muted: oklch(0.9601 0.0103 261.79);
+  --muted-foreground: oklch(0.5243 0.0475 259.56);
+  --accent: oklch(0.9168 0.0168 259.42);
+  --accent-foreground: oklch(0.2568 0.0473 261.22);
+  --destructive: oklch(0.5771 0.2152 27.33);
+  --border: oklch(0.9168 0.0168 259.42);
+  --input: oklch(0.9168 0.0168 259.42);
+  --ring: oklch(0.5876 0.1389 241.97);
+}
+
+.ps.dark {
+  --background: oklch(0.15 0.0208 264.34);
+  --foreground: oklch(0.9478 0.0162 262.75);
+  --card: oklch(0.197 0.0323 264.54);
+  --card-foreground: oklch(0.9478 0.0162 262.75);
+  --popover: oklch(0.197 0.0323 264.54);
+  --popover-foreground: oklch(0.9478 0.0162 262.75);
+  --primary: oklch(0.7535 0.139 232.66);
+  --primary-foreground: oklch(0.15 0.0208 264.34);
+  --secondary: oklch(0.2441 0.0393 262.59);
+  --secondary-foreground: oklch(0.9478 0.0162 262.75);
+  --muted: oklch(0.2441 0.0393 262.59);
+  --muted-foreground: oklch(0.6895 0.047 261.1);
+  --accent: oklch(0.2902 0.0494 262.72);
+  --accent-foreground: oklch(0.9478 0.0162 262.75);
+  --destructive: oklch(0.7106 0.1661 22.22);
+  --border: oklch(0.2902 0.0494 262.72);
+  --input: oklch(0.2902 0.0494 262.72);
+  --ring: oklch(0.7535 0.139 232.66);
+}
+
+/* Le fond du document reste visible derrière la zone de rebond du défilement : sans
+   ces règles, une bande claire apparaîtrait sous l'interface en thème sombre. */
+body {
+  background-color: oklch(0.9693 0.0074 260.73);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: oklch(0.15 0.0208 264.34);
+  }
+}
+
+:root {
+  color-scheme: light dark;
+}

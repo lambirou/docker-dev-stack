@@ -13,6 +13,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | postgres | `pgvector/pgvector:pg17` | Relationnel + vecteurs | - | 5432 |
 | mariadb | `mariadb:12.3` | Relationnel | - | 3306 |
 | phpmyadmin | `phpmyadmin:5` | UI MariaDB | https://phpmyadmin.dev.test | 8306 |
+| prisma-studio | build local (`node:22-alpine`) | Console PostgreSQL, derrière la page de connexion | https://prisma.dev.test | 5555 |
 | qdrant | `qdrant/qdrant:v1.19.0` | Base vectorielle | https://qdrant.dev.test | 6333, gRPC 6334 |
 | meilisearch | `getmeili/meilisearch:v1` | Recherche plein texte | https://meilisearch.dev.test | 7700 |
 | neo4j | `neo4j:5.26-community` | Base graphe | https://neo4j.dev.test | 7474, bolt 7687 |
@@ -53,7 +54,7 @@ chmod +x scripts/*.sh          # une seule fois, si le bit exécutable manque
 
 Le script installe Docker s'il manque, crée le `.env`, télécharge les images,
 démarre les services, ajoute les domaines `.test` au fichier hosts, génère les
-certificats HTTPS, puis vérifie les 41 points de contrôle.
+certificats HTTPS, puis vérifie les 44 points de contrôle.
 
 Sans droits élevés, la version réduite fonctionne aussi — `.\scripts\install.ps1`
 ou `./scripts/install.sh`. Les deux options qui touchent la machine sont alors
@@ -146,7 +147,7 @@ sur 127.0.0.1 tout seuls, mais aucun ne le fait pour `.test`. Pour activer les U
 
 ```powershell
 $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-$names = "auth","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","tools","containers","proxy"
+$names = "auth","traefik","minio","mail","redis","qdrant","meilisearch","neo4j","phpmyadmin","prisma","tools","containers","proxy"
 Add-Content $hostsFile "127.0.0.1 dev.test"        # le portail, sur le domaine nu
 Add-Content $hostsFile ($names | ForEach-Object { "127.0.0.1 $($_).dev.test" })
 ```
@@ -155,7 +156,7 @@ Et sous macOS ou Linux :
 
 ```bash
 echo "127.0.0.1 dev.test" | sudo tee -a /etc/hosts >/dev/null   # le portail
-for n in auth traefik minio mail redis qdrant meilisearch neo4j phpmyadmin tools containers proxy; do
+for n in auth traefik minio mail redis qdrant meilisearch neo4j phpmyadmin prisma tools containers proxy; do
   echo "127.0.0.1 $n.dev.test" | sudo tee -a /etc/hosts >/dev/null
 done
 ```
@@ -351,6 +352,77 @@ Supprimer la ligne `middlewares: tinyauth@docker` du bloc `labels` du portail et
 remettre `ports: ["8080:80"]`. Le service `tinyauth` n'a alors plus de raison d'être.
 À noter : `localhost:8080` serait servi en HTTP simple, hors du proxy et donc hors TLS.
 
+## Prisma Studio
+
+Console de la base PostgreSQL, sur https://prisma.dev.test : parcourir les tables,
+filtrer, trier, éditer les lignes, suivre les clés étrangères et lancer du SQL.
+C'est à Postgres ce que phpMyAdmin est à MariaDB.
+
+Le service n'utilise pas la commande `prisma studio`, qui suppose un projet Prisma et
+son `schema.prisma`. Il embarque le composant React `@prisma/studio-core`, comme le
+décrit [la documentation d'embarquement](https://www.prisma.io/docs/studio/integrations/embedding) :
+Studio ne sait pas ouvrir une connexion, il construit du SQL et le confie à un
+**BFF** — *backend for frontend* — qui l'exécute. C'est tout l'intérêt du montage :
+la chaîne de connexion reste sur le serveur et **n'atteint jamais le navigateur**.
+Aucun schéma Prisma n'est requis, la structure est lue par introspection.
+
+Le même processus Node sert le bundle et l'endpoint `/studio`, donc une seule origine
+et aucun CORS à ouvrir. Il tient en deux fichiers :
+
+| Fichier | Rôle |
+| --- | --- |
+| `apps/prisma-studio/server/index.js` | Le BFF : seul composant qui parle à Postgres |
+| `apps/prisma-studio/src/App.jsx` | Le composant `<Studio />` et son adaptateur |
+
+Le BFF implémente les cinq procédures du contrat : `query`, `sequence`, `transaction`
+(les éditions multi-lignes sont atomiques), `sql-lint` (l'éditeur souligne les erreurs
+avant exécution) et une réponse explicite pour `query-insights`, qui suppose une
+télémétrie que cette stack n'a pas.
+
+**La console est derrière tinyauth**, comme le portail. Ce n'est pas décoratif : elle
+lit *et écrit* dans la base sans redemander le moindre mot de passe. Le port direct
+`localhost:5555`, lui, court-circuite la page de connexion — c'est vrai de tous les
+ports publiés de la stack, mais cela se sait pour un accès en écriture. Retirer la
+ligne `ports:` du service ferme cet accès.
+
+Deux garde-fous côté serveur : `statement_timeout` à 30 secondes, pour qu'une requête
+trop lourde rende la main avec une erreur lisible plutôt que de figer l'onglet, et
+`application_name=prisma-studio`, qui rend ces sessions identifiables dans
+`pg_stat_activity`. Les écritures demandent toujours une confirmation explicite.
+
+### Pointer une autre base
+
+Par défaut, Studio ouvre la base décrite par les variables `POSTGRES_*`. Pour viser
+ailleurs, renseigner `PRISMA_STUDIO_DATABASE_URL` dans le `.env` — elle a la priorité :
+
+```bash
+PRISMA_STUDIO_DATABASE_URL=postgresql://user:pass@hote:5432/autre_base
+docker compose up -d prisma-studio
+```
+
+Depuis un conteneur, l'hôte est le **nom du service** (`postgres`), pas `localhost`.
+
+### Fonctions assistées par IA
+
+Elles sont volontairement absentes. Studio les masque de lui-même quand la prop `llm`
+n'est pas fournie : les brancher supposerait une clé d'API et un appel sortant à
+chaque requête, ce qu'une stack locale n'a pas à faire sans qu'on le demande. La
+télémétrie anonyme du paquet est coupée par `CHECKPOINT_DISABLE=1`.
+
+### Développement
+
+```bash
+cd apps/prisma-studio
+npm install
+npm start            # le BFF, sur 5555
+npm run dev          # Vite sur 5174, qui relaie /studio vers le BFF
+```
+
+Le thème est accordé sur celui du portail dans `src/index.css`, et non par la prop
+`theme` du composant : la documentation la décrit au format shadcn en triplets HSL,
+mais la version 0.33 déclare ses variables en `oklch` et n'injecte aucune feuille de
+style à partir de cette prop. Le commentaire du fichier le rappelle.
+
 ## Identifiants
 
 Tous définis dans `.env`, valeurs de développement uniquement.
@@ -365,10 +437,13 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 | Qdrant | clé API | `devkey` (en-tête `api-key`) |
 | Meilisearch | clé maître | `devmasterkey_min16chars` |
 | Traefik Manager | - | `devproxypass` (mot de passe seul, pas de nom d'utilisateur) |
-| Tinyauth, donc accès au portail | `dev` | `devauthpass` |
+| Tinyauth, donc accès au portail et à Prisma Studio | `dev` | `devauthpass` |
 
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.
+
+Prisma Studio ne demande rien : sa connexion vit côté serveur et n'est jamais envoyée
+au navigateur. Seule la page de connexion de la stack le protège.
 
 ### Copier les vraies valeurs depuis le portail
 

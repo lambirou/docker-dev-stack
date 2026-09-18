@@ -125,6 +125,7 @@ cat <<'CONSOLES'
   Consoles web, servies en HTTPS :
     Portail        https://dev.test
     phpMyAdmin     https://phpmyadmin.dev.test
+    Prisma Studio  https://prisma.dev.test
     MinIO          https://minio.dev.test
     Mailpit        https://mail.dev.test
     RedisInsight   https://redis.dev.test

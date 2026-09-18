@@ -135,7 +135,7 @@ noms_stack() {
   # porte d'entrée de la stack est donc protégée comme les autres.
   printf '%s\n' dev.test auth.dev.test traefik.dev.test minio.dev.test mail.dev.test \
     redis.dev.test qdrant.dev.test meilisearch.dev.test neo4j.dev.test phpmyadmin.dev.test \
-    tools.dev.test containers.dev.test proxy.dev.test
+    prisma.dev.test tools.dev.test containers.dev.test proxy.dev.test
 }
 
 vider_cache_dns() {
