@@ -118,24 +118,39 @@ services:
     build: ./apps/prisma-studio
     image: dev-stack-prisma-studio:local
     container_name: dev-prisma-studio
-    # Le BFF recompose lui-meme l'URL de connexion a partir de ces variables, et
-    # POSTGRES_HOST vaut le nom du service : la connexion part de l'interieur du
-    # reseau docker, pas de localhost. DATABASE_URL, si elle est renseignee dans le
-    # .env, prend le pas sur ce trio et permet de pointer une autre base.
+    # Le selecteur de connexions se peuple tout seul a partir de ces variables : une
+    # carte PostgreSQL, une carte MariaDB. Les hotes valent le nom du service, la
+    # connexion partant de l'interieur du reseau docker et non de localhost.
+    # DATABASE_URL, si elle est renseignee dans le .env, remplace la carte PostgreSQL
+    # et permet de pointer une autre base sans rien changer d'autre.
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: postgres
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_HOST: mariadb
       DATABASE_URL: ${PRISMA_STUDIO_DATABASE_URL:-}
       PRISMA_STUDIO_STATEMENT_TIMEOUT: ${PRISMA_STUDIO_STATEMENT_TIMEOUT:-30}
       # Pas d'appel sortant pour la telemetrie anonyme de @prisma/studio-core.
       CHECKPOINT_DISABLE: "1"
     ports: ["${PRISMA_STUDIO_PORT:-5555}:5555"]
-    # La console ne sert a rien tant que la base ne repond pas : attendre evite un
-    # premier ecran en erreur au demarrage de la stack.
+    volumes:
+      # Les connexions ajoutees depuis l'interface, pour qu'elles survivent a un
+      # docker compose down. Elles y sont ecrites en clair, mots de passe compris,
+      # au meme titre que dans le fichier .env.
+      - prisma-studio-data:/data
+      # Zone d'echange pour les bases SQLite : un fichier depose dans data/sqlite
+      # s'ouvre depuis l'interface sous le chemin /sqlite/<fichier>.db.
+      - ./data/sqlite:/sqlite
+    # La console ne sert a rien tant que les bases ne repondent pas : attendre evite
+    # un premier ecran en erreur au demarrage de la stack.
     depends_on:
       postgres:
+        condition: service_healthy
+      mariadb:
         condition: service_healthy
     labels:
       traefik.enable: "true"
@@ -460,6 +475,7 @@ networks:
 volumes:
   postgres-data:
   mariadb-data:
+  prisma-studio-data:
   qdrant-data:
   meili-data:
   neo4j-data:

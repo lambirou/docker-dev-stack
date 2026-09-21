@@ -71,8 +71,8 @@ export const services = [
   {
     id: "prisma-studio",
     nom: "Prisma Studio",
-    role: "Console de la base PostgreSQL : parcourir, filtrer et éditer les données",
-    motsCles: ["prisma", "studio", "postgres", "postgresql", "sql", "interface", "console", "tables", "lignes", "éditer", "données", "requête", "filtrer", "orm", "schéma", "pgadmin", "adminer"],
+    role: "Console PostgreSQL, MariaDB et SQLite : parcourir, filtrer et éditer les données",
+    motsCles: ["prisma", "studio", "postgres", "postgresql", "mariadb", "mysql", "sqlite", "sql", "interface", "console", "tables", "lignes", "éditer", "données", "requête", "filtrer", "orm", "schéma", "pgadmin", "adminer"],
     categorie: "donnees",
     image: "build local (node:22-alpine)",
     // Derrière tinyauth, comme le portail : la console lit et écrit dans la base sans
@@ -82,12 +82,12 @@ export const services = [
     urlLocalhost: null,
     portDirect: 5555,
     sonde: "http://localhost:5555/healthz",
-    // Rien à saisir pour entrer : la chaîne de connexion vit côté serveur et n'est
-    // jamais envoyée au navigateur. C'est tout l'intérêt du montage embarqué — et la
-    // raison pour laquelle la page est placée derrière la connexion de la stack.
+    // Rien à saisir pour entrer : les chaînes de connexion vivent côté serveur et ne
+    // sont jamais envoyées au navigateur. C'est tout l'intérêt du montage embarqué —
+    // et la raison pour laquelle la page est placée derrière la connexion de la stack.
     identifiants: [
-      { label: "Base", valeur: "${POSTGRES_DB}" },
-      { label: "Connexion", valeur: "côté serveur, hors du navigateur" },
+      { label: "Bases proposées", valeur: "PostgreSQL, MariaDB, SQLite" },
+      { label: "Connexions", valeur: "côté serveur, hors du navigateur" },
     ],
   },
   {

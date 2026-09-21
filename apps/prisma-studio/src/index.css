@@ -14,6 +14,16 @@ body,
      laisse pas une bande vide sous la grille. */
   min-height: 100dvh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Studio occupe tout ce que la barre du haut lui laisse. min-height: 0 n'est pas
+   décoratif : sans lui, un enfant flex refuse de se réduire en dessous de sa taille
+   naturelle, et la grille déborderait sous le bas de la fenêtre. */
+.studio-cadre {
+  flex: 1;
+  min-height: 0;
 }
 
 /* Studio suit prefers-color-scheme tout seul : il pose une classe .dark sur son
@@ -84,4 +94,448 @@ body {
 
 :root {
   color-scheme: light dark;
+}
+
+/* --- Sélecteur de connexions ------------------------------------------------
+
+   Ces écrans vivent hors du conteneur .ps de Studio : son Tailwind y est sans
+   effet, et ils ont donc leur propre feuille. Les variables ci-dessous reprennent
+   la palette du portail, avec un jeu clair par défaut et un jeu sombre sous
+   prefers-color-scheme — le même comportement que Studio lui-même. */
+
+:root {
+  --sel-fond: oklch(0.9693 0.0074 260.73);
+  --sel-carte: oklch(1 0 0);
+  --sel-relief: oklch(0.9601 0.0103 261.79);
+  --sel-bord: oklch(0.9168 0.0168 259.42);
+  --sel-bord-vif: oklch(0.85 0.0235 258.3);
+  --sel-texte: oklch(0.2568 0.0473 261.22);
+  --sel-attenue: oklch(0.5243 0.0475 259.56);
+  --sel-accent: oklch(0.5876 0.1389 241.97);
+  --sel-accent-texte: oklch(1 0 0);
+  --sel-ko: oklch(0.5771 0.2152 27.33);
+  --sel-ok: oklch(0.5182 0.1358 158.6);
+  --sel-ombre: 0 1px 2px oklch(0.2568 0.0473 261.22 / 8%),
+    0 8px 24px oklch(0.2568 0.0473 261.22 / 6%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sel-fond: oklch(0.15 0.0208 264.34);
+    --sel-carte: oklch(0.197 0.0323 264.54);
+    --sel-relief: oklch(0.2441 0.0393 262.59);
+    --sel-bord: oklch(0.2902 0.0494 262.72);
+    --sel-bord-vif: oklch(0.3608 0.0554 261.5);
+    --sel-texte: oklch(0.9478 0.0162 262.75);
+    --sel-attenue: oklch(0.6895 0.047 261.1);
+    --sel-accent: oklch(0.7535 0.139 232.66);
+    --sel-accent-texte: oklch(0.15 0.0208 264.34);
+    --sel-ko: oklch(0.7106 0.1661 22.22);
+    --sel-ok: oklch(0.7269 0.1454 158.15);
+    --sel-ombre: 0 1px 2px oklch(0 0 0 / 40%), 0 8px 24px oklch(0 0 0 / 30%);
+  }
+}
+
+.accueil,
+.modal,
+.barre {
+  font-family:
+    "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--sel-texte);
+}
+
+.accueil {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  background: var(--sel-fond);
+}
+
+.accueil-carte {
+  width: 100%;
+  max-width: 27rem;
+  background: var(--sel-carte);
+  border: 1px solid var(--sel-bord);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: var(--sel-ombre);
+}
+
+.accueil-titre {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.accueil-sous-titre {
+  margin: 0.35rem 0 1.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--sel-attenue);
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.liste-ligne {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.connexion {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  background: var(--sel-carte);
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.6rem;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.connexion:hover {
+  border-color: var(--sel-bord-vif);
+  background: var(--sel-relief);
+}
+
+.connexion:focus-visible,
+.supprimer:focus-visible,
+.bouton:focus-visible,
+.onglet:focus-visible,
+.lien:focus-visible,
+.retour:focus-visible,
+.champ input:focus-visible {
+  outline: 2px solid var(--sel-accent);
+  outline-offset: 2px;
+}
+
+.connexion-icone {
+  flex-shrink: 0;
+  color: var(--sel-attenue);
+}
+
+.connexion-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.connexion-nom {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Le détail peut être long (hôte, port, base) : il est tronqué plutôt que de faire
+   grandir la carte ou déborder. */
+.connexion-detail {
+  font-size: 0.72rem;
+  color: var(--sel-attenue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: var(--sel-relief);
+  border: 1px solid var(--sel-bord);
+  color: var(--sel-attenue);
+}
+
+.ajouter {
+  border-style: dashed;
+  color: var(--sel-attenue);
+}
+
+.ajouter:hover {
+  color: var(--sel-texte);
+}
+
+.supprimer {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.6rem;
+  background: var(--sel-carte);
+  color: var(--sel-attenue);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.supprimer:hover:not(:disabled) {
+  color: var(--sel-ko);
+  border-color: var(--sel-ko);
+}
+
+.supprimer:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.vide,
+.patiente {
+  padding: 1rem 0.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--sel-attenue);
+}
+
+.pied {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--sel-attenue);
+}
+
+.alerte,
+.succes {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.78rem;
+  border: 1px solid;
+}
+
+.alerte {
+  color: var(--sel-ko);
+  border-color: color-mix(in oklab, var(--sel-ko) 35%, transparent);
+  background: color-mix(in oklab, var(--sel-ko) 10%, transparent);
+}
+
+.succes {
+  color: var(--sel-ok);
+  border-color: color-mix(in oklab, var(--sel-ok) 35%, transparent);
+  background: color-mix(in oklab, var(--sel-ok) 10%, transparent);
+}
+
+/* --- Modal d'ajout ---------------------------------------------------------- */
+
+.voile {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: oklch(0 0 0 / 55%);
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  max-width: 30rem;
+  background: var(--sel-carte);
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.9rem;
+  padding: 1.35rem;
+  box-shadow: var(--sel-ombre);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.modal-titre {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.onglets {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.22rem;
+  background: var(--sel-relief);
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.55rem;
+}
+
+.onglet {
+  flex: 1;
+  padding: 0.4rem 0.3rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--sel-attenue);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.onglet.actif {
+  background: var(--sel-carte);
+  color: var(--sel-texte);
+  font-weight: 600;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 10%);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.champ > span {
+  font-size: 0.75rem;
+  color: var(--sel-attenue);
+}
+
+.champ input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.45rem;
+  background: var(--sel-fond);
+  color: var(--sel-texte);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.champ.court {
+  max-width: 7rem;
+}
+
+.paire {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.champ small,
+.aide {
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--sel-attenue);
+}
+
+.champ code,
+.aide code {
+  font-family: "Cascadia Code", ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.95em;
+}
+
+.lien {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sel-accent);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.modal-pied {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.bouton {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.45rem;
+  background: var(--sel-carte);
+  color: var(--sel-texte);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  border-color: var(--sel-bord-vif);
+}
+
+.bouton.primaire {
+  background: var(--sel-accent);
+  border-color: var(--sel-accent);
+  color: var(--sel-accent-texte);
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* --- Barre au-dessus de Studio ---------------------------------------------- */
+
+.barre {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--sel-carte);
+  border-bottom: 1px solid var(--sel-bord);
+  font-size: 0.78rem;
+}
+
+.retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--sel-bord);
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--sel-attenue);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.retour:hover {
+  color: var(--sel-texte);
+  border-color: var(--sel-bord-vif);
+}
+
+.barre-nom {
+  font-weight: 600;
+}
+
+.barre-detail {
+  color: var(--sel-attenue);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

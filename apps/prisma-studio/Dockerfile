@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 
 # Contrairement au portail, l'image finale n'est pas un nginx : Studio a besoin d'un
-# backend qui parle à Postgres, donc le même processus Node sert le bundle et le BFF.
+# backend qui parle aux bases, donc le même processus Node sert le bundle et le BFF.
+#
+# SQLite passe par le module node:sqlite de Node lui-même : pas de better-sqlite3,
+# donc pas de compilation native à prévoir dans l'image alpine.
 
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -22,9 +25,17 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
 COPY --from=build /app/dist ./dist
 
+# Les connexions ajoutées depuis l'interface sont écrites ici, sur un volume. Le
+# dossier est créé et donné à l'utilisateur node dès la construction : monté vide, un
+# volume hérite des droits du point de montage, et un conteneur non-root ne pourrait
+# plus rien y écrire.
+RUN mkdir -p /data && chown node:node /data
+
 # Le processus tourne sous l'utilisateur node, présent dans l'image officielle : un
-# serveur exposé n'a pas besoin de root, et cette console parle à la base.
+# serveur exposé n'a pas besoin de root, et cette console parle aux bases.
 USER node
+
+VOLUME ["/data"]
 
 EXPOSE 5555
 

@@ -13,7 +13,7 @@ graphe, cache, stockage objet et outillage, le tout derrière un reverse proxy T
 | postgres | `pgvector/pgvector:pg17` | Relationnel + vecteurs | - | 5432 |
 | mariadb | `mariadb:12.3` | Relationnel | - | 3306 |
 | phpmyadmin | `phpmyadmin:5` | UI MariaDB | https://phpmyadmin.dev.test | 8306 |
-| prisma-studio | build local (`node:22-alpine`) | Console PostgreSQL, derrière la page de connexion | https://prisma.dev.test | 5555 |
+| prisma-studio | build local (`node:22-alpine`) | Console PostgreSQL / MariaDB / SQLite, derrière la page de connexion | https://prisma.dev.test | 5555 |
 | qdrant | `qdrant/qdrant:v1.19.0` | Base vectorielle | https://qdrant.dev.test | 6333, gRPC 6334 |
 | meilisearch | `getmeili/meilisearch:v1` | Recherche plein texte | https://meilisearch.dev.test | 7700 |
 | neo4j | `neo4j:5.26-community` | Base graphe | https://neo4j.dev.test | 7474, bolt 7687 |
@@ -354,30 +354,45 @@ remettre `ports: ["8080:80"]`. Le service `tinyauth` n'a alors plus de raison d'
 
 ## Prisma Studio
 
-Console de la base PostgreSQL, sur https://prisma.dev.test : parcourir les tables,
+Console de bases de données, sur https://prisma.dev.test : parcourir les tables,
 filtrer, trier, éditer les lignes, suivre les clés étrangères et lancer du SQL.
-C'est à Postgres ce que phpMyAdmin est à MariaDB.
+C'est à PostgreSQL ce que phpMyAdmin est à MariaDB — et elle sait aussi ouvrir
+MariaDB et SQLite.
+
+L'écran d'accueil liste les bases disponibles. PostgreSQL et MariaDB y figurent
+d'office, déduites du `.env` : rien à saisir. Le bouton **Ajouter une base de
+données** permet d'en viser d'autres, y compris hors de la stack.
+
+| Moteur | Provenance |
+| --- | --- |
+| PostgreSQL | automatique (`POSTGRES_*`), ou ajoutée |
+| MySQL / MariaDB | automatique (`MARIADB_*`), ou ajoutée |
+| SQLite | ajoutée, depuis un fichier de `data/sqlite` |
 
 Le service n'utilise pas la commande `prisma studio`, qui suppose un projet Prisma et
 son `schema.prisma`. Il embarque le composant React `@prisma/studio-core`, comme le
 décrit [la documentation d'embarquement](https://www.prisma.io/docs/studio/integrations/embedding) :
 Studio ne sait pas ouvrir une connexion, il construit du SQL et le confie à un
 **BFF** — *backend for frontend* — qui l'exécute. C'est tout l'intérêt du montage :
-la chaîne de connexion reste sur le serveur et **n'atteint jamais le navigateur**.
-Aucun schéma Prisma n'est requis, la structure est lue par introspection.
+les chaînes de connexion restent sur le serveur et **n'atteignent jamais le
+navigateur**, qui ne manipule qu'un identifiant opaque. Aucun schéma Prisma n'est
+requis, la structure est lue par introspection.
 
 Le même processus Node sert le bundle et l'endpoint `/studio`, donc une seule origine
-et aucun CORS à ouvrir. Il tient en deux fichiers :
+et aucun CORS à ouvrir.
 
 | Fichier | Rôle |
 | --- | --- |
-| `apps/prisma-studio/server/index.js` | Le BFF : seul composant qui parle à Postgres |
-| `apps/prisma-studio/src/App.jsx` | Le composant `<Studio />` et son adaptateur |
+| `apps/prisma-studio/server/index.js` | Le BFF et l'API du sélecteur |
+| `apps/prisma-studio/server/connexions.js` | Le registre : quelles bases, et d'où |
+| `apps/prisma-studio/server/moteurs.js` | L'ouverture des connexions, un pilote par moteur |
+| `apps/prisma-studio/src/App.jsx` | Sélecteur, modal d'ajout, puis `<Studio />` |
 
 Le BFF implémente les cinq procédures du contrat : `query`, `sequence`, `transaction`
 (les éditions multi-lignes sont atomiques), `sql-lint` (l'éditeur souligne les erreurs
 avant exécution) et une réponse explicite pour `query-insights`, qui suppose une
-télémétrie que cette stack n'a pas.
+télémétrie que cette stack n'a pas. La connexion visée voyage dans `customPayload`,
+prévu pour ce genre de contexte ; c'est le serveur qui la traduit en base réelle.
 
 **La console est derrière tinyauth**, comme le portail. Ce n'est pas décoratif : elle
 lit *et écrit* dans la base sans redemander le moindre mot de passe. Le port direct
@@ -390,17 +405,47 @@ trop lourde rende la main avec une erreur lisible plutôt que de figer l'onglet,
 `application_name=prisma-studio`, qui rend ces sessions identifiables dans
 `pg_stat_activity`. Les écritures demandent toujours une confirmation explicite.
 
-### Pointer une autre base
+### Ajouter une base
 
-Par défaut, Studio ouvre la base décrite par les variables `POSTGRES_*`. Pour viser
-ailleurs, renseigner `PRISMA_STUDIO_DATABASE_URL` dans le `.env` — elle a la priorité :
+Le formulaire demande soit les champs séparés (hôte, port, base, utilisateur, mot de
+passe), soit une URL de connexion collée telle quelle. Le bouton **Tester** éprouve la
+connexion avant d'enregistrer : une base qui ne répond pas n'entre pas dans la liste.
+
+Depuis un conteneur, l'hôte est le **nom du service** — `postgres`, `mariadb` — et non
+`localhost`, qui désignerait le conteneur de Studio lui-même.
+
+Les connexions ajoutées sont écrites dans le volume `prisma-studio-data` et survivent
+à un `docker compose down`. Elles y sont stockées **en clair, mots de passe compris**,
+au même titre que dans le fichier `.env` : cette stack est un environnement de
+développement local, et prétendre le contraire par un chiffrement dont la clé serait
+dans le même dossier ne protégerait de rien.
+
+Les cartes marquées `stack` viennent du `.env` et ne se suppriment pas depuis
+l'interface : elles seraient reconstruites au démarrage suivant. Elles se modifient
+dans le `.env`, puis `docker compose up -d prisma-studio`.
+
+### Ouvrir un fichier SQLite
+
+Déposer le fichier dans `data/sqlite/`, monté sur `/sqlite` dans le conteneur, puis
+l'ajouter avec ce chemin — `data/sqlite/notes.db` se saisit donc `/sqlite/notes.db`.
+
+Le fichier doit exister : Studio refuse d'en créer un. Sans ce garde-fou, une faute de
+frappe ouvrirait une base vide, et rien n'indiquerait pourquoi les tables ont disparu.
+
+SQLite passe par le module `node:sqlite` de Node lui-même : pas de `better-sqlite3`,
+donc aucune compilation native dans l'image.
+
+### Pointer la carte PostgreSQL ailleurs
+
+`PRISMA_STUDIO_DATABASE_URL` remplace la connexion PostgreSQL déduite du `.env` :
 
 ```bash
 PRISMA_STUDIO_DATABASE_URL=postgresql://user:pass@hote:5432/autre_base
 docker compose up -d prisma-studio
 ```
 
-Depuis un conteneur, l'hôte est le **nom du service** (`postgres`), pas `localhost`.
+C'est utile pour viser une base de travail sans quitter la stack. Pour simplement en
+ajouter une de plus, le formulaire de l'interface suffit.
 
 ### Fonctions assistées par IA
 
@@ -442,8 +487,8 @@ Tous définis dans `.env`, valeurs de développement uniquement.
 Dans RedisInsight, ajouter la base avec l'hôte `redis` et le port `6379` : la connexion
 part de l'intérieur du réseau Docker, pas de `localhost`.
 
-Prisma Studio ne demande rien : sa connexion vit côté serveur et n'est jamais envoyée
-au navigateur. Seule la page de connexion de la stack le protège.
+Prisma Studio ne demande rien : ses connexions vivent côté serveur et ne sont jamais
+envoyées au navigateur. Seule la page de connexion de la stack le protège.
 
 ### Copier les vraies valeurs depuis le portail
 
